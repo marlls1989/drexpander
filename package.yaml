@@ -1,0 +1,54 @@
+name:                drexpander
+version:             0.1.0.0
+github:              "marlls1989/drexpander"
+license:             BSD3
+author:              "Marcos Luiggi Lemos Sartori"
+maintainer:          "marcos.sartori@acad.pucrs.br"
+copyright:           "2018 Marcos Luiggi Lemos Sartori"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on GitHub at <https://github.com/marlls1989/drexpander#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+- mtl
+- containers
+- optparse-applicative
+- bytestring
+- array
+- verilog
+
+library:
+  source-dirs: src
+
+executables:
+  drexpander:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - drexpander
+
+tests:
+  drexpander-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - drexpander
