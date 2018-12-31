@@ -30,4 +30,5 @@ main = do
 prgMain :: ReaderT PrgOptions IO ()
 prgMain = do
   env <- ask
-  liftIO $ print env
+  modules <- processVerilogFiles $ verilogFiles env
+  liftIO . putStr . unlines $ show <$> modules
