@@ -67,6 +67,15 @@ vlogDRWireOutput = ("drwire.out " ++)
 vlogWireInput :: Verilog.Identifier -> Verilog.Identifier
 vlogWireInput = ("input " ++)
 
+fixDffReset :: (MonadReader PrgOptions m) => Verilog.ModuleItem -> m Verilog.ModuleItem
+fixDffReset inst@(Verilog.Instance mname parms name portmap)
+  | mname == "dff" || mname == "dffen" = do
+      env <- ask
+      let resetPin = (Just "reset", Just . Verilog.Ident $ resetName env)
+      return $ Verilog.Instance mname parms name (resetPin : portmap)
+  | otherwise = return inst
+fixDffReset x = return x
+
 processModule :: (MonadReader PrgOptions m) => Verilog.Module -> m Verilog.Module
 processModule mod = do
   options <- ask
@@ -80,7 +89,8 @@ processModule mod = do
   let drWires = vlogDRWireInstance <$> Set.elems wires
   let wireClkRst = vlogWireInput <$> Set.elems clkAndReset
   let margs = drInputs ++ drOutputs ++ wireClkRst
-  return $ Verilog.Module mname margs (drWires ++ mitems)
+  instances <- mapM fixDffReset mitems
+  return $ Verilog.Module mname margs (drWires ++ instances)
 
 processVerilogFile :: (MonadReader PrgOptions m, MonadIO m) => FilePath -> m [Verilog.Module]
 processVerilogFile path = readVerilogFile path >>= mapM processModule
