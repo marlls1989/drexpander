@@ -23,17 +23,19 @@ dependencies:
 - base >= 4.7 && < 5
 - mtl
 - containers
-- optparse-applicative
 - bytestring
 - array
 - verilog
+- algebraic-graphs >= 0.3
+- glpk-hs
+- optparse-applicative
 
 library:
   source-dirs: src
 
 executables:
-  drexpander:
-    main:                Main.hs
+  hbcnConstrainer:
+    main:                constrainer.hs
     source-dirs:         app
     ghc-options:
     - -threaded
@@ -41,11 +43,9 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - drexpander
-
-tests:
-  drexpander-test:
-    main:                Spec.hs
-    source-dirs:         test
+  drexpander:
+    main:                expander.hs
+    source-dirs:         app
     ghc-options:
     - -threaded
     - -rtsopts
