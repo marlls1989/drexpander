@@ -8,31 +8,28 @@ module HBCN.Timing
 import           Algebra.Graph.Labelled
 import           Control.Monad
 import           Data.LinearProgram
+import           Data.LinearProgram.LinExpr
 import           HBCN.Internal
-import           Prelude                hiding (Num (..))
+import           Prelude                    hiding (Num (..))
 
 data LPVar = Arrival Transition
            | FreeSlack Transition Transition
            | ClkPeriod
-           | CycleTime
            deriving (Show, Read, Eq, Ord)
 
 type TimingLP = LP LPVar Double
 
-n *& v = linCombination [(n, v)]
-
-arrivalTimeEq (place, src, dst) = let
-  src' = 1 *& Arrival src
-  dst' = 1 *& Arrival dst
-  slack = 1 *& FreeSlack src dst
-  period = 1 *& ClkPeriod
-  token = (fromIntegral . tokenCount) place *& CycleTime
-  in (src' + period + slack - token) `equal` dst'
-
+arrivalTimeEq cycleTime (place, src, dst) = do
+  let src' = Arrival src
+  let dst' = Arrival dst
+  let slack = FreeSlack src dst
+  let tokens = if place == Token then cycleTime else 0
+  linCombination [(1, src'), (1, ClkPeriod), (-1, dst'), (1, slack)]  `equalTo` tokens
+  setVarBounds slack $ LBound 0
 
 constraintCycleTime :: HBCN -> Double -> TimingLP
 constraintCycleTime hbcn cycleTime = execLPM $ do
   setDirection Max
-  setObjective (1 *& ClkPeriod)
-  varEq CycleTime cycleTime
-  mapM_ arrivalTimeEq $ edgeList hbcn
+  setObjective (linCombination [(1, ClkPeriod)])
+  setVarBounds ClkPeriod $ LBound 0
+  mapM_ (arrivalTimeEq cycleTime) $ edgeList hbcn

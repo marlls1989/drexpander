@@ -13,36 +13,42 @@ data Transition = DataTrans String
                 | NullTrans String
                 deriving (Show, Read, Eq, Ord)
 
-newtype Place = Place {tokenCount :: Int}
-              deriving (Show, Read, Eq, Ord)
+data Place = Invalid
+           | Token
+           | Place
+           deriving (Show, Read, Eq, Ord)
 
 type HBCN = Graph Place Transition
 
 instance Semigroup Place where
-  (<>) a = Place . ((+) `on` tokenCount) a
+  Invalid <> a = a
+  a <> Invalid = a
+  Token <> _ = Token
+  _ <> Token = Token
+  _ <> _ = Place
 
 instance Monoid Place where
-  mempty = Place 0
+  mempty = Invalid
 
 createHBCNFromStructure :: [StructuralElement] -> HBCN
 createHBCNFromStructure = edges . concatMap go where
   go (Port src dst) =
-    concatMap (\x -> [(Place 0, DataTrans src, DataTrans x)
-                     ,(Place 0, NullTrans src, NullTrans x)
-                     ,(Place 0, DataTrans x,   NullTrans src)
-                     ,(Place 1, NullTrans x,   DataTrans src)]) dst
+    concatMap (\x -> [(Place, DataTrans src, DataTrans x)
+                     ,(Place, NullTrans src, NullTrans x)
+                     ,(Place, DataTrans x,   NullTrans src)
+                     ,(Token, NullTrans x,   DataTrans src)]) dst
   go (NullReg src dst) =
-    concatMap (\x -> [(Place 0, DataTrans src, DataTrans x)
-                     ,(Place 0, NullTrans src, NullTrans x)
-                     ,(Place 0, DataTrans x,   NullTrans src)
-                     ,(Place 1, NullTrans x,   DataTrans src)]) dst
+    concatMap (\x -> [(Place, DataTrans src, DataTrans x)
+                     ,(Place, NullTrans src, NullTrans x)
+                     ,(Place, DataTrans x,   NullTrans src)
+                     ,(Token, NullTrans x,   DataTrans src)]) dst
   go (DataReg src dst) =
     let slave = src ++ "_slave"
-    in [(Place 1, DataTrans src,   DataTrans slave)
-       ,(Place 0, NullTrans src,   NullTrans slave)
-       ,(Place 0, DataTrans slave, NullTrans src)
-       ,(Place 0, NullTrans slave, DataTrans src)] ++
-    concatMap (\x -> [(Place 0, DataTrans slave, DataTrans x)
-                     ,(Place 0, NullTrans slave, NullTrans x)
-                     ,(Place 0, DataTrans x,     NullTrans slave)
-                     ,(Place 1, NullTrans x,     DataTrans slave)]) dst
+    in [(Place, DataTrans src,   DataTrans slave)
+       ,(Token, NullTrans src,   NullTrans slave)
+       ,(Place, DataTrans slave, NullTrans src)
+       ,(Place, NullTrans slave, DataTrans src)] ++
+    concatMap (\x -> [(Token, DataTrans slave, DataTrans x)
+                     ,(Place, NullTrans slave, NullTrans x)
+                     ,(Place, DataTrans x,     NullTrans slave)
+                     ,(Place, NullTrans x,     DataTrans slave)]) dst
