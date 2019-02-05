@@ -1,5 +1,3 @@
-module Main where
-
 import           Control.Monad.Reader
 import           DRExpander
 import           Options.Applicative
