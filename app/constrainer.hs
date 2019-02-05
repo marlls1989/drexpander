@@ -39,12 +39,13 @@ hbcnFromFiles files = do
 
 prettyPrint :: (MonadIO m) => (ReturnCode, Maybe (Double, Map LPVar Double)) -> m ()
 prettyPrint (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $ do
-  let slacks = filter (\(x, val) -> case x of
+  printf "Found pseudo clock constraint: %.3g\n" $ vars Map.! ClkPeriod
+  case filter (\(x, val) -> case x of
                           (FreeSlack _ _) -> val >= 0.0005
                           _               -> False
-                      ) $ Map.toList vars
-  printf "Found pseudo clock constraint: %.3g\n" $ vars Map.! ClkPeriod
-  mapM_  slackString slacks
+                      ) $ Map.toList vars of
+    []     -> printf "Well Balanced Design, no free slack!\n"
+    slacks -> mapM_  slackString slacks
   where
     slackString ((FreeSlack src dst), val) =
       printf "Free Slack from %s to %s: %.3g\n"
