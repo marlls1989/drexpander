@@ -13,7 +13,8 @@ import           HBCN.Internal
 import           Prelude                    hiding (Num (..))
 
 data LPVar = Arrival Transition
-           | Delay String String
+           | FwDelay String String
+           | BwDelay String String
            | FwSlack String String
            | BwSlack String String
            | DelayFactor
@@ -24,8 +25,12 @@ type TimingLP = LP LPVar Double
 arrivalTimeEq cycleTime (place, src, dst) = do
   let src' = Arrival src
   let dst' = Arrival dst
-  let delay = Delay (nodeName src) (nodeName dst)
   let ct = if hasToken place then cycleTime else 0
+  let delay = case (src, dst) of
+        (DataTrans s, DataTrans d) -> FwDelay s d
+        (NullTrans s, NullTrans d) -> FwDelay s d
+        (DataTrans s, NullTrans d) -> BwDelay s d
+        (NullTrans s, DataTrans d) -> BwDelay s d
   let slack = case (src, dst) of
         (DataTrans s, DataTrans d) -> FwSlack s d
         (NullTrans s, NullTrans d) -> FwSlack s d

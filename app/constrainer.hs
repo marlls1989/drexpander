@@ -64,25 +64,28 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
     printf "set_input_transition -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
     printf "set_output_transition -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
-    (concatMap maxDelay . filter
-      (\(x, val) -> case x of
-          (Delay _ _) -> True
-          _           -> False
-      ) $ Map.toList vars)
+    concatMap maxDelay (Map.toList vars)
   where
-    maxDelay (Delay src dst, val) =
+    maxDelay (FwDelay src dst, val) =
       printf "set_max_delay -reset_path -from {%s_t} -to {%s_t} %.3f\n" src dst val ++
       printf "set_max_delay -reset_path -from {%s_f} -to {%s_f} %.3f\n" src dst val ++
       printf "set_max_delay -reset_path -from {%s_t} -to {%s_f} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val ++
-      (if src =~ "port:" then
-         printf "set_max_delay -reset_path -from {%s_ack} -to {%s_t} %.3f\n" src dst val ++
-         printf "set_max_delay -reset_path -from {%s_ack} -to {%s_f} %.3f\n" src dst val
-       else []) ++
-      (if dst =~ "port:" then
-         printf "set_max_delay -reset_path -from {%s_t} -to {%s_ack} %.3f\n" src dst val ++
-         printf "set_max_delay -reset_path -from {%s_f} -to {%s_ack} %.3f\n" src dst val
-      else [])
+      printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val
+    maxDelay (BwDelay src dst, val)
+      | (src =~ "port:") && (dst =~ "port:") =
+          printf "set_max_delay -reset_path -from {%s_ack} -to {%s_ack} %.3f\n" src dst val
+      | src =~ "port:" =
+          printf "set_max_delay -reset_path -from {%s_ack} -to {%s_t} %.3f\n" src dst val ++
+          printf "set_max_delay -reset_path -from {%s_ack} -to {%s_f} %.3f\n" src dst val
+      | dst =~ "port:" =
+          printf "set_max_delay -reset_path -from {%s_t} -to {%s_ack} %.3f\n" src dst val ++
+          printf "set_max_delay -reset_path -from {%s_f} -to {%s_ack} %.3f\n" src dst val
+      | otherwise =
+          printf "set_max_delay -reset_path -from {%s_t} -to {%s_t} %.3f\n" src dst val ++
+          printf "set_max_delay -reset_path -from {%s_f} -to {%s_f} %.3f\n" src dst val ++
+          printf "set_max_delay -reset_path -from {%s_t} -to {%s_f} %.3f\n" src dst val ++
+          printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val
+    maxDelay _ = []
 
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
