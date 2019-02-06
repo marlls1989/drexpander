@@ -22,7 +22,7 @@ data LPVar = Arrival Transition
 
 type TimingLP = LP LPVar Double
 
-arrivalTimeEq cycleTime (place, src, dst) = do
+arrivalTimeEq cycleTime minDelay (place, src, dst) = do
   let src' = Arrival src
   let dst' = Arrival dst
   let ct = if hasToken place then cycleTime else 0
@@ -36,15 +36,15 @@ arrivalTimeEq cycleTime (place, src, dst) = do
         (NullTrans s, NullTrans d) -> FwSlack s d
         (DataTrans s, NullTrans d) -> BwSlack s d
         (NullTrans s, DataTrans d) -> BwSlack s d
-  setVarBounds delay $ LBound 0
+  setVarBounds delay $ LBound minDelay
   setVarBounds slack $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)]  `equalTo` ct
   linCombination [(1, delay)] `equal` linCombination [(weight place, DelayFactor), (1, slack)]
 
 
-constraintCycleTime :: HBCN -> Double -> TimingLP
-constraintCycleTime hbcn cycleTime = execLPM $ do
+constraintCycleTime :: HBCN -> Double -> Double -> TimingLP
+constraintCycleTime hbcn cycleTime minDelay = execLPM $ do
   setDirection Max
   setObjective (linCombination [(1, DelayFactor)])
   setVarBounds DelayFactor $ LBound 0
-  mapM_ (arrivalTimeEq cycleTime) $ edgeList hbcn
+  mapM_ (arrivalTimeEq cycleTime minDelay) $ edgeList hbcn
