@@ -40,7 +40,7 @@ createHBCNFromStructure = edges . concatMap go where
                              ,(Place True  bkw, NullTrans x,   DataTrans src)]) dst
   go (DataReg src dst) =
     let
-      slave = src ++ "_slave"
+      slave = src ++ "/slave"
       bkw = 10 * (1 + logBase 2 (fromIntegral $ length dst))
     in [(Place False 10, DataTrans src,   DataTrans slave)
        ,(Place True  10, NullTrans src,   NullTrans slave)
