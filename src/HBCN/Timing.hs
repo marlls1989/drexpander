@@ -13,8 +13,10 @@ import           HBCN.Internal
 import           Prelude                    hiding (Num (..))
 
 data LPVar = Arrival Transition
-           | FreeSlack Transition Transition
-           | ClkPeriod
+           | Delay String String
+           | FwSlack String String
+           | BwSlack String String
+           | DelayFactor
            deriving (Show, Read, Eq, Ord)
 
 type TimingLP = LP LPVar Double
@@ -22,14 +24,22 @@ type TimingLP = LP LPVar Double
 arrivalTimeEq cycleTime (place, src, dst) = do
   let src' = Arrival src
   let dst' = Arrival dst
-  let slack = FreeSlack src dst
-  let tokens = if place == Token then cycleTime else 0
-  linCombination [(1, src'), (1, ClkPeriod), (-1, dst'), (1, slack)]  `equalTo` tokens
+  let delay = Delay (nodeName src) (nodeName dst)
+  let ct = if hasToken place then cycleTime else 0
+  let slack = case (src, dst) of
+        (DataTrans s, DataTrans d) -> FwSlack s d
+        (NullTrans s, NullTrans d) -> FwSlack s d
+        (DataTrans s, NullTrans d) -> BwSlack s d
+        (NullTrans s, DataTrans d) -> BwSlack s d
+  setVarBounds delay $ LBound 0
   setVarBounds slack $ LBound 0
+  linCombination [(1, src'), (-1, dst'), (1, delay)]  `equalTo` ct
+  linCombination [(1, delay)] `equal` linCombination [(weight place, DelayFactor), (1, slack)]
+
 
 constraintCycleTime :: HBCN -> Double -> TimingLP
 constraintCycleTime hbcn cycleTime = execLPM $ do
   setDirection Max
-  setObjective (linCombination [(1, ClkPeriod)])
-  setVarBounds ClkPeriod $ LBound 0
+  setObjective (linCombination [(1, DelayFactor)])
+  setVarBounds DelayFactor $ LBound 0
   mapM_ (arrivalTimeEq cycleTime) $ edgeList hbcn
