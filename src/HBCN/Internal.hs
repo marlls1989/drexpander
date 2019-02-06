@@ -4,51 +4,49 @@ import           Algebra.Graph.Labelled
 import           Data.Function
 import           Data.Monoid
 
-data StructuralElement = Port String [String]
-                       | DataReg String [String]
-                       | NullReg String [String]
+data StructuralElement = Port String [(String, Double)]
+                       | DataReg String [(String, Double)]
+                       | NullReg String [(String, Double)]
                        deriving (Show, Read, Eq, Ord)
 
-data Transition = DataTrans String
-                | NullTrans String
+data Transition = DataTrans {nodeName :: String}
+                | NullTrans {nodeName :: String}
                 deriving (Show, Read, Eq, Ord)
 
-data Place = Invalid
-           | Token
-           | Place
+data Place = Unconnected
+           | Place {hasToken :: Bool, weight :: Double}
            deriving (Show, Read, Eq, Ord)
 
 type HBCN = Graph Place Transition
 
 instance Semigroup Place where
-  Invalid <> a = a
-  a <> Invalid = a
-  Token <> _ = Token
-  _ <> Token = Token
-  _ <> _ = Place
+  Unconnected <> a = a
+  a <> _ = a
 
 instance Monoid Place where
-  mempty = Invalid
+  mempty = Unconnected
 
 createHBCNFromStructure :: [StructuralElement] -> HBCN
 createHBCNFromStructure = edges . concatMap go where
-  go (Port src dst) =
-    concatMap (\x -> [(Place, DataTrans src, DataTrans x)
-                     ,(Place, NullTrans src, NullTrans x)
-                     ,(Place, DataTrans x,   NullTrans src)
-                     ,(Token, NullTrans x,   DataTrans src)]) dst
-  go (NullReg src dst) =
-    concatMap (\x -> [(Place, DataTrans src, DataTrans x)
-                     ,(Place, NullTrans src, NullTrans x)
-                     ,(Place, DataTrans x,   NullTrans src)
-                     ,(Token, NullTrans x,   DataTrans src)]) dst
+  go (Port src dst) = let bkw = 10 * (1 + logBase 2 (fromIntegral $ length dst))
+    in concatMap (\(x, w) -> [(Place False w,   DataTrans src, DataTrans x)
+                             ,(Place False w,   NullTrans src, NullTrans x)
+                             ,(Place False bkw, DataTrans x,   NullTrans src)
+                             ,(Place True  bkw, NullTrans x,   DataTrans src)]) dst
+  go (NullReg src dst) = let bkw = 10 * (1 + logBase 2 (fromIntegral $ length dst))
+    in concatMap (\(x, w) -> [(Place False w,   DataTrans src, DataTrans x)
+                             ,(Place False w,   NullTrans src, NullTrans x)
+                             ,(Place False bkw, DataTrans x,   NullTrans src)
+                             ,(Place True  bkw, NullTrans x,   DataTrans src)]) dst
   go (DataReg src dst) =
-    let slave = src ++ "_slave"
-    in [(Place, DataTrans src,   DataTrans slave)
-       ,(Token, NullTrans src,   NullTrans slave)
-       ,(Place, DataTrans slave, NullTrans src)
-       ,(Place, NullTrans slave, DataTrans src)] ++
-    concatMap (\x -> [(Token, DataTrans slave, DataTrans x)
-                     ,(Place, NullTrans slave, NullTrans x)
-                     ,(Place, DataTrans x,     NullTrans slave)
-                     ,(Place, NullTrans x,     DataTrans slave)]) dst
+    let
+      slave = src ++ "_slave"
+      bkw = 10 * (1 + logBase 2 (fromIntegral $ length dst))
+    in [(Place False 10, DataTrans src,   DataTrans slave)
+       ,(Place True  10, NullTrans src,   NullTrans slave)
+       ,(Place False 10, DataTrans slave, NullTrans src)
+       ,(Place False 10, NullTrans slave, DataTrans src)] ++
+    concatMap (\(x, w) -> [(Place True  w,   DataTrans slave, DataTrans x)
+                          ,(Place False w,   NullTrans slave, NullTrans x)
+                          ,(Place False bkw, DataTrans x,     NullTrans slave)
+                          ,(Place False bkw, NullTrans x,     DataTrans slave)]) dst
