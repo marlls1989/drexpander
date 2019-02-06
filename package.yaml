@@ -29,6 +29,7 @@ dependencies:
 - algebraic-graphs >= 0.3
 - glpk-hs
 - optparse-applicative
+- regex-tdfa
 
 library:
   source-dirs: src

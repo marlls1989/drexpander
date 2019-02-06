@@ -6,6 +6,7 @@ import qualified Data.Map                as Map
 import           HBCN
 import           Options.Applicative
 import           Text.Printf
+import           Text.Regex.TDFA
 
 type LPRet = (ReturnCode, Maybe (Double, Map LPVar Double))
 
@@ -25,7 +26,6 @@ prgOptions = PrgOptions
              <*> option auto (long "cycletime"
                               <> metavar "VALUE"
                               <> short 't'
-                              <> value 1
                               <> help "Maximum Cycle Time Constraint")
              <*> strOption (long "clock"
                             <> metavar "NAME"
@@ -35,7 +35,7 @@ prgOptions = PrgOptions
              <*> option str (long "output"
                              <> metavar "FILE"
                              <> short 'o'
-                             <> value "constraints.sdc"
+                             <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
              <*> flag False True (long "slacks"
                                   <> help "Print Free Slack")
@@ -71,12 +71,14 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
       ) $ Map.toList vars)
   where
     maxDelay (Delay src dst, val) =
-      printf "set_max_delay -reset_path -from {%s_t} -to {%s_t} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_f} -to {%s_f} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_t} -to {%s_f} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_t} -to {%s_ack} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_f} -to {%s_ack} %.3f\n" src dst val
+      if dst =~ "port:.*" then
+        printf "set_max_delay -reset_path -from {%s_t} -to {%s_ack} %.3f\n" src dst val ++
+        printf "set_max_delay -reset_path -from {%s_f} -to {%s_ack} %.3f\n" src dst val
+      else
+        printf "set_max_delay -reset_path -from {%s_t} -to {%s_t} %.3f\n" src dst val ++
+        printf "set_max_delay -reset_path -from {%s_f} -to {%s_f} %.3f\n" src dst val ++
+        printf "set_max_delay -reset_path -from {%s_t} -to {%s_f} %.3f\n" src dst val ++
+        printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val
 
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
