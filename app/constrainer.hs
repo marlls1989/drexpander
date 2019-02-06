@@ -74,7 +74,10 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
       printf "set_max_delay -reset_path -from {%s_t} -to {%s_t} %.3f\n" src dst val ++
       printf "set_max_delay -reset_path -from {%s_f} -to {%s_f} %.3f\n" src dst val ++
       printf "set_max_delay -reset_path -from {%s_t} -to {%s_f} %.3f\n" src dst val ++
-      printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val
+      printf "set_max_delay -reset_path -from {%s_f} -to {%s_t} %.3f\n" src dst val ++
+      printf "set_max_delay -reset_path -from {%s_t} -to {%s_ack} %.3f\n" src dst val ++
+      printf "set_max_delay -reset_path -from {%s_f} -to {%s_ack} %.3f\n" src dst val
+
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
 printSlack :: (MonadIO m) => LPRet -> m ()
