@@ -78,13 +78,13 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
 printSlack :: (MonadIO m) => LPRet -> m ()
-printSlack (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $ do
+printSlack (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
   mapM_  (\(x, v) ->
             if v < 0.0005 then return ()
             else case x of
               BwSlack s d -> printf "Backward propagation slack from %s to %s: %.3f\n" s d v
               FwSlack s d -> printf "Forward propagation slack from %s to %s: %.3f\n" s d v
-              _            -> return ()) $ Map.toList vars
+              _           -> return ()) $ Map.toList vars
 printSlack err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
 prgMain :: ReaderT PrgOptions IO ()
