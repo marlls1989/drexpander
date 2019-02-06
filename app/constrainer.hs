@@ -68,8 +68,8 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   opts <- ask
   let clkPeriod = max (10 * (vars Map.! DelayFactor)) (minimalDelay opts)
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
-    printf "set_input_transition -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
-    printf "set_output_transition -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
+    printf "set_input_delay -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
+    printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
     concatMap maxDelay (Map.toList vars)
   where
     maxDelay (FwDelay src dst, val) =
@@ -84,8 +84,8 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
           printf "set_max_delay -reset_path -from {%s_ack} -to {%s} %.3f\n" src (trueRail dst) val ++
           printf "set_max_delay -reset_path -from {%s_ack} -to {%s} %.3f\n" src (falseRail dst) val
       | dst =~ "port:" =
-          printf "set_max_delay -reset_path -from {%s_t} -to {%s_ack} %.3f\n" (trueRail  src) dst val ++
-          printf "set_max_delay -reset_path -from {%s_f} -to {%s_ack} %.3f\n" (falseRail src) dst val
+          printf "set_max_delay -reset_path -from {%s} -to {%s_ack} %.3f\n" (trueRail  src) dst val ++
+          printf "set_max_delay -reset_path -from {%s} -to {%s_ack} %.3f\n" (falseRail src) dst val
       | otherwise =
           printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (trueRail  dst) val ++
           printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (falseRail dst) val ++
