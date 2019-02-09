@@ -66,7 +66,7 @@ hbcnFromFiles files = do
 sdcContent :: (MonadReader PrgOptions m) => LPRet -> m String
 sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   opts <- ask
-  let clkPeriod = max (10 * (vars Map.! DelayFactor)) (minimalDelay opts)
+  let clkPeriod = max (100 * (vars Map.! DelayFactor)) (minimalDelay opts)
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
     printf "set_input_delay -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
     printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
@@ -104,8 +104,7 @@ sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show
 printSlack :: (MonadIO m) => LPRet -> m ()
 printSlack (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
   mapM_  (\(x, v) ->
-            if v < 0.0005 then return ()
-            else case x of
+            case x of
               BwSlack s d -> printf "Backward propagation slack from %s to %s: %.3f\n" s d v
               FwSlack s d -> printf "Forward propagation slack from %s to %s: %.3f\n" s d v
               _           -> return ()) $ Map.toList vars
@@ -124,9 +123,9 @@ prgMain = do
   let lp = constraintCycleTime hbcn cycleTime minDelay
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
+  when (debugSlacks opts) $ printSlack result
   liftIO $ if lpObjective result > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
   else
-    putStrLn "Deadlock Found in the Design, not writing constraints file"
-  when (debugSlacks opts) $ printSlack result
+    errorWithoutStackTrace "Deadlock Found in the Design, not writing constraints file"

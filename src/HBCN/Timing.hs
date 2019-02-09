@@ -39,7 +39,7 @@ arrivalTimeEq cycleTime minDelay (place, src, dst) = do
   setVarBounds delay $ LBound minDelay
   setVarBounds slack $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)]  `equalTo` ct
-  linCombination [(1, delay)] `equal` linCombination [(weight place, DelayFactor), (1, slack)]
+  linCombination [(1, delay)] `equal` linCombination [(100 + weight place, DelayFactor), (1, slack)]
 
 
 constraintCycleTime :: HBCN -> Double -> Double -> TimingLP
