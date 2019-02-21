@@ -14,10 +14,10 @@ data PrgOptions = PrgOptions
   { inputFiles      :: [FilePath]
   , targetCycleTime :: Double
   , minimalDelay    :: Double
-  , biasing :: Double
+  , biasing         :: Double
   , clockName       :: String
   , outputFile      :: FilePath
-  , debugSlacks     :: Bool
+  , debugSol        :: Bool
   } deriving (Show)
 
 prgOptions :: Parser PrgOptions
@@ -49,8 +49,8 @@ prgOptions = PrgOptions
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
-             <*> flag False True (long "slacks"
-                                  <> help "Print Free Slack")
+             <*> flag False True (long "debug"
+                                  <> help "Print LP Variables Solution")
 
 
 
@@ -107,13 +107,9 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
 
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
-printSlack :: (MonadIO m) => LPRet -> m ()
-printSlack (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
-  mapM_  (\(x, v) ->
-            case x of
-              BwSlack s d -> printf "Backward propagation slack from %s to %s: %.3f\n" s d v
-              FwSlack s d -> printf "Forward propagation slack from %s to %s: %.3f\n" s d v
-              _           -> return ()) $ Map.toList vars
+printSolution :: (MonadIO m) => LPRet -> m ()
+printSolution (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
+  mapM_  print $ Map.toList vars
 printSlack err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
 lpObjective :: LPRet -> Double
@@ -130,7 +126,7 @@ prgMain = do
   let lp = constraintCycleTime hbcn cycleTime minDelay bias
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
-  when (debugSlacks opts) $ printSlack result
+  when (debugSol opts) $ printSolution result
   liftIO $ if lpObjective result > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
