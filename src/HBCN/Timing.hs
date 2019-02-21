@@ -22,7 +22,7 @@ data LPVar = Arrival Transition
 
 type TimingLP = LP LPVar Double
 
-arrivalTimeEq cycleTime minDelay (place, src, dst) = do
+arrivalTimeEq cycleTime minDelay biasing (place, src, dst) = do
   let src' = Arrival src
   let dst' = Arrival dst
   let ct = if hasToken place then cycleTime else 0
@@ -39,12 +39,12 @@ arrivalTimeEq cycleTime minDelay (place, src, dst) = do
   setVarBounds delay $ LBound minDelay
   setVarBounds slack $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)]  `equalTo` ct
-  linCombination [(1, delay)] `equal` linCombination [(100 + weight place, DelayFactor), (1, slack)]
+  linCombination [(1, delay)] `equal` linCombination [(biasing + weight place, DelayFactor), (1, slack)]
 
 
-constraintCycleTime :: HBCN -> Double -> Double -> TimingLP
-constraintCycleTime hbcn cycleTime minDelay = execLPM $ do
+constraintCycleTime :: HBCN -> Double -> Double -> Double -> TimingLP
+constraintCycleTime hbcn cycleTime minDelay biasing = execLPM $ do
   setDirection Max
   setObjective (linCombination [(1, DelayFactor)])
   setVarBounds DelayFactor $ LBound 0
-  mapM_ (arrivalTimeEq cycleTime minDelay) $ edgeList hbcn
+  mapM_ (arrivalTimeEq cycleTime minDelay biasing) $ edgeList hbcn

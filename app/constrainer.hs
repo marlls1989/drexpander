@@ -14,6 +14,7 @@ data PrgOptions = PrgOptions
   { inputFiles      :: [FilePath]
   , targetCycleTime :: Double
   , minimalDelay    :: Double
+  , biasing :: Double
   , clockName       :: String
   , outputFile      :: FilePath
   , debugSlacks     :: Bool
@@ -33,6 +34,11 @@ prgOptions = PrgOptions
                               <> short 'm'
                               <> value 0
                               <> help "Minimum Path Delay")
+             <*> option auto (long "bias"
+                              <> metavar "VALUE"
+                              <> short 'b'
+                              <> value 0
+                              <> help "Path weight bias")
              <*> strOption (long "clock"
                             <> metavar "NAME"
                             <> short 'c'
@@ -120,7 +126,8 @@ prgMain = do
   hbcn <- hbcnFromFiles $ inputFiles opts
   let cycleTime = targetCycleTime opts
   let minDelay = minimalDelay opts
-  let lp = constraintCycleTime hbcn cycleTime minDelay
+  let bias = biasing opts
+  let lp = constraintCycleTime hbcn cycleTime minDelay bias
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSlacks opts) $ printSlack result
