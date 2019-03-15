@@ -7,6 +7,7 @@ import           HBCN
 import           Options.Applicative
 import           Text.Printf
 import           Text.Regex.TDFA
+import Data.Monoid
 
 type LPRet = (ReturnCode, Maybe (Double, Map LPVar Double))
 

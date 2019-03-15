@@ -1,6 +1,7 @@
 import           Control.Monad.Reader
 import           DRExpander
 import           Options.Applicative
+import Data.Monoid
 
 prgOptions :: Parser PrgOptions
 prgOptions = PrgOptions

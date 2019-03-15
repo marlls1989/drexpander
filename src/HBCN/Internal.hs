@@ -3,6 +3,7 @@ module HBCN.Internal where
 import           Algebra.Graph.Labelled
 import           Data.Function
 import           Data.Monoid
+import Data.Semigroup as SG
 
 data StructuralElement = Port String [(String, Double)]
                        | DataReg String [(String, Double)]
@@ -25,6 +26,7 @@ instance Semigroup Place where
 
 instance Monoid Place where
   mempty = Unconnected
+  mappend = (SG.<>)
 
 createHBCNFromStructure :: [StructuralElement] -> HBCN
 createHBCNFromStructure = edges . concatMap go where
