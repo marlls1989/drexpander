@@ -136,11 +136,9 @@ prgMain = do
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ do
+    let lpfile = (outputFile opts) ++ ".lp"
     printSolution result
-    liftIO $ do
-      let lpfile = (outputFile opts) ++ ".lp"
-      printf "Writing lp formulation to %s\n" lpfile
-      writeLP lpfile lp
+    liftIO $ writeLP lpfile lp
   liftIO $ if lpObjective result > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
