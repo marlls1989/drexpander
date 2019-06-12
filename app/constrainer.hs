@@ -18,6 +18,7 @@ data PrgOptions = PrgOptions
   , biasing         :: Double
   , clockName       :: String
   , outputFile      :: FilePath
+  , pseudoClock :: Bool
   , debugSol        :: Bool
   } deriving (Show)
 
@@ -50,6 +51,9 @@ prgOptions = PrgOptions
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
+             <*> flag False True (short 'p'
+                                  <> long "pclock"
+                                  <> help "Compute the Pseudo Clock")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution")
 
@@ -73,7 +77,7 @@ hbcnFromFiles files = do
 sdcContent :: (MonadReader PrgOptions m) => LPRet -> m String
 sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   opts <- ask
-  let clkPeriod = max (100 * (vars Map.! DelayFactor)) (minimalDelay opts)
+  let clkPeriod = max (vars Map.! PseudoClock) (minimalDelay opts)
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
     printf "set_input_delay -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
     printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
@@ -124,7 +128,11 @@ prgMain = do
   let cycleTime = targetCycleTime opts
   let minDelay = minimalDelay opts
   let bias = biasing opts
-  let lp = constraintCycleTime hbcn cycleTime minDelay bias
+  let lp =
+        if pseudoClock opts then
+          computePseudoClock hbcn cycleTime
+        else
+          constraintCycleTime hbcn cycleTime minDelay bias
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ printSolution result

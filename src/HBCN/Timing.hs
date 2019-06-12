@@ -3,7 +3,9 @@ module HBCN.Timing
   (LPVar (..)
   ,TimingLP (..)
   ,constraintCycleTime
-  ,arrivalTimeEq)where
+  ,arrivalTimeEq
+  ,arrivalTimeConstraint
+  ,computePseudoClock) where
 
 import           Algebra.Graph.Labelled
 import           Control.Monad
@@ -17,10 +19,25 @@ data LPVar = Arrival Transition
            | BwDelay String String
            | FwSlack String String
            | BwSlack String String
+           | PseudoClock
            | DelayFactor
            deriving (Show, Read, Eq, Ord)
 
 type TimingLP = LP LPVar Double
+
+arrivalTimeConstraint cycleTime (place, src, dst) = do
+  let src' = Arrival src
+  let dst' = Arrival dst
+  let ct = if hasToken place then cycleTime else 0
+  let slack = case (src, dst) of
+        (DataTrans s, DataTrans d) -> FwSlack s d
+        (NullTrans s, NullTrans d) -> FwSlack s d
+        (DataTrans s, NullTrans d) -> BwSlack s d
+        (NullTrans s, DataTrans d) -> BwSlack s d
+  setVarBounds slack $ LBound 0
+  setVarBounds src' $ LBound 0
+  setVarBounds dst' $ LBound 0
+  linCombination [(1, src'), (-1, dst'), (1, PseudoClock), (1, slack)] `equalTo` ct
 
 arrivalTimeEq cycleTime minDelay biasing (place, src, dst) = do
   let src' = Arrival src
@@ -38,8 +55,11 @@ arrivalTimeEq cycleTime minDelay biasing (place, src, dst) = do
         (NullTrans s, DataTrans d) -> BwSlack s d
   setVarBounds delay $ LBound minDelay
   setVarBounds slack $ LBound 0
+  setVarBounds src' $ LBound 0
+  setVarBounds dst' $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)]  `equalTo` ct
   linCombination [(1, delay)] `equal` linCombination [(biasing + weight place, DelayFactor), (1, slack)]
+  linCombination [(1, PseudoClock)] `leq` linCombination [(1, delay)]
 
 
 constraintCycleTime :: HBCN -> Double -> Double -> Double -> TimingLP
@@ -47,4 +67,12 @@ constraintCycleTime hbcn cycleTime minDelay biasing = execLPM $ do
   setDirection Max
   setObjective (linCombination [(1, DelayFactor)])
   setVarBounds DelayFactor $ LBound 0
+  setVarBounds PseudoClock $ LBound 0
   mapM_ (arrivalTimeEq cycleTime minDelay biasing) $ edgeList hbcn
+
+computePseudoClock :: HBCN -> Double -> TimingLP
+computePseudoClock hbcn cycleTime = execLPM $ do
+  setDirection Max
+  setObjective $ linCombination [(1, PseudoClock)]
+  setVarBounds PseudoClock $ LBound 0
+  mapM_ (arrivalTimeConstraint cycleTime) $ edgeList hbcn
