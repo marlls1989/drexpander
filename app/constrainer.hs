@@ -135,7 +135,12 @@ prgMain = do
           constraintCycleTime hbcn cycleTime minDelay bias
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
-  when (debugSol opts) $ printSolution result
+  when (debugSol opts) $ do
+    printSolution result
+    liftIO $ do
+      let lpfile = (outputFile opts) ++ ".lp"
+      printf "Writing lp formulation to %s\n" lpfile
+      writeLP lpfile lp
   liftIO $ if lpObjective result > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
