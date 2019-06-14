@@ -3,11 +3,11 @@ import           Control.Monad.Reader
 import           Data.LinearProgram.GLPK
 import           Data.Map                (Map)
 import qualified Data.Map                as Map
+import           Data.Monoid
 import           HBCN
 import           Options.Applicative
 import           Text.Printf
 import           Text.Regex.TDFA
-import Data.Monoid
 
 type LPRet = (ReturnCode, Maybe (Double, Map LPVar Double))
 
@@ -18,7 +18,7 @@ data PrgOptions = PrgOptions
   , biasing         :: Double
   , clockName       :: String
   , outputFile      :: FilePath
-  , pseudoClock :: Bool
+  , useMaxdelay     :: Bool
   , debugSol        :: Bool
   } deriving (Show)
 
@@ -33,7 +33,6 @@ prgOptions = PrgOptions
                               <> help "Maximum Cycle Time Constraint")
              <*> option auto (long "mindelay"
                               <> metavar "VALUE"
-                              <> short 'm'
                               <> value 0
                               <> help "Minimum Path Delay")
              <*> option auto (long "bias"
@@ -51,9 +50,9 @@ prgOptions = PrgOptions
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
-             <*> flag False True (short 'p'
-                                  <> long "pclock"
-                                  <> help "Compute the Pseudo Clock")
+             <*> flag False True (short 'm'
+                                  <> long "maxdelay"
+                                  <> help "Compute maxdelay constraints of individual paths")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution")
 
@@ -129,14 +128,14 @@ prgMain = do
   let minDelay = minimalDelay opts
   let bias = biasing opts
   let lp =
-        if pseudoClock opts then
-          computePseudoClock hbcn cycleTime
-        else
+        if useMaxdelay opts then
           constraintCycleTime hbcn cycleTime minDelay bias
+        else
+          computePseudoClock hbcn cycleTime
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ do
-    let lpfile = (outputFile opts) ++ ".lp"
+    let lpfile = outputFile opts ++ ".lp"
     printSolution result
     liftIO $ writeLP lpfile lp
   liftIO $ if lpObjective result > 0.0005 then do

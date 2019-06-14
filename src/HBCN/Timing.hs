@@ -65,7 +65,7 @@ arrivalTimeEq cycleTime minDelay biasing (place, src, dst) = do
 constraintCycleTime :: HBCN -> Double -> Double -> Double -> TimingLP
 constraintCycleTime hbcn cycleTime minDelay biasing = execLPM $ do
   setDirection Max
-  setObjective (linCombination [(1, DelayFactor)])
+  setObjective (linCombination [(1, DelayFactor), (1, PseudoClock)])
   setVarBounds DelayFactor $ LBound 0
   setVarBounds PseudoClock $ LBound 0
   mapM_ (arrivalTimeEq cycleTime minDelay biasing) $ edgeList hbcn
