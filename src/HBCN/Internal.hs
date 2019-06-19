@@ -45,18 +45,18 @@ createHBCNFromStructure = edges . concatMap go where
       sout = src ++ "/sout"
       sin = src ++ "/sin"
       bkw = 10 * (1.5 + logBase 2 (fromIntegral $ length dst))
-    in [ -- Input slave
-       (Place  False 10, DataTrans src,  DataTrans sin)
-       ,(Place True 10, NullTrans src,  NullTrans sin)
-       ,(Place False 15, DataTrans sin,  NullTrans src)
-       ,(Place False 15, NullTrans sin,  DataTrans src)
+    in -- Input Slave
+      [(Place False 10, DataTrans src,  DataTrans sin)
+      ,(Place True  10, NullTrans src,  NullTrans sin)
+      ,(Place False 15, DataTrans sin,  NullTrans src)
+      ,(Place False 15, NullTrans sin,  DataTrans src)
        -- Data stage
-       ,(Place True  10, DataTrans sin,  DataTrans sout)
-       ,(Place False 10, NullTrans sin,  NullTrans sout)
-       ,(Place False 15, DataTrans sout, NullTrans sin)
-       ,(Place False 15, NullTrans sout, DataTrans sin)] ++
+      ,(Place True  10, DataTrans sin,  DataTrans sout)
+      ,(Place False 10, NullTrans sin,  NullTrans sout)
+      ,(Place False 15, DataTrans sout, NullTrans sin)
+      ,(Place False 15, NullTrans sout, DataTrans sin)] ++
        -- Output slave
     concatMap (\(x, w) -> [(Place False w,   DataTrans sout, DataTrans x)
                           ,(Place False w,   NullTrans sout, NullTrans x)
-                          ,(Place False bkw, DataTrans x,     NullTrans sout)
-                          ,(Place True  bkw, NullTrans x,     DataTrans sout)]) dst
+                          ,(Place False bkw, DataTrans x,    NullTrans sout)
+                          ,(Place True  bkw, NullTrans x,    DataTrans sout)]) dst
