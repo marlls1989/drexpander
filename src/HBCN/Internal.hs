@@ -3,7 +3,7 @@ module HBCN.Internal where
 import           Algebra.Graph.Labelled
 import           Data.Function
 import           Data.Monoid
-import Data.Semigroup as SG
+import           Data.Semigroup         as SG
 
 data StructuralElement = Port String [(String, Double)]
                        | DataReg String [(String, Double)]
@@ -42,13 +42,21 @@ createHBCNFromStructure = edges . concatMap go where
                              ,(Place True  bkw, NullTrans x,   DataTrans src)]) dst
   go (DataReg src dst) =
     let
-      slave = src ++ "/slave"
+      sout = src ++ "/sout"
+      sin = src ++ "/sin"
       bkw = 10 * (1.5 + logBase 2 (fromIntegral $ length dst))
-    in [(Place False 10, DataTrans src,   DataTrans slave)
-       ,(Place True  10, NullTrans src,   NullTrans slave)
-       ,(Place False 15, DataTrans slave, NullTrans src)
-       ,(Place False 15, NullTrans slave, DataTrans src)] ++
-    concatMap (\(x, w) -> [(Place True  w,   DataTrans slave, DataTrans x)
-                          ,(Place False w,   NullTrans slave, NullTrans x)
-                          ,(Place False bkw, DataTrans x,     NullTrans slave)
-                          ,(Place False bkw, NullTrans x,     DataTrans slave)]) dst
+    in [ -- Input slave
+       (Place  False 10, DataTrans src,  DataTrans sin)
+       ,(Place True 10, NullTrans src,  NullTrans sin)
+       ,(Place False 15, DataTrans sin,  NullTrans src)
+       ,(Place False 15, NullTrans sin,  DataTrans src)
+       -- Data stage
+       ,(Place True  10, DataTrans sin,  DataTrans sout)
+       ,(Place False 10, NullTrans sin,  NullTrans sout)
+       ,(Place False 15, DataTrans sout, NullTrans sin)
+       ,(Place False 15, NullTrans sout, DataTrans sin)] ++
+       -- Output slave
+    concatMap (\(x, w) -> [(Place False w,   DataTrans sout, DataTrans x)
+                          ,(Place False w,   NullTrans sout, NullTrans x)
+                          ,(Place False bkw, DataTrans x,     NullTrans sout)
+                          ,(Place True  bkw, NullTrans x,     DataTrans sout)]) dst
