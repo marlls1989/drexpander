@@ -20,7 +20,9 @@ data PrgOptions = PrgOptions
   } deriving (Show)
 
 bitBlastWire :: Wire -> [Wire]
-bitBlastWire (Bus x y name) = map (Wire . expandBusWireName name) [x..y]
+bitBlastWire (Bus x y name) = map (Wire . expandBusWireName name) [x'..y'] where
+  x' = min x y
+  y' = max x y
 bitBlastWire x              = [x]
 
 expandBusWireName :: String -> Integer -> String
@@ -101,15 +103,17 @@ vlogDRWireInputInst (Wire name) =
 vlogDRWireInputInst (Bus x y name) =
     [Verilog.Input range $ map (name ++) ["_t", "_f"]
     ,Verilog.Output range [name ++ "_ack"]] ++
-    (concatMap go values)
+    concatMap go values
   where
     range = Just (Verilog.Number $ fromInteger x, Verilog.Number $ fromInteger y)
-    values = [x..y] :: [Integer]
+    values = [x'..y'] :: [Integer]
+    x' = min x y
+    y' = max x y
     go :: Integer -> [Verilog.ModuleItem]
     go i =
       let name' = expandBusWireName name i in
-        [Verilog.Assign (Verilog.LHS $ name' ++ ".t") (Verilog.Bit (Verilog.Ident $ name ++ "_t") $ fromInteger i)
-        ,Verilog.Assign (Verilog.LHS $ name' ++ ".f") (Verilog.Bit (Verilog.Ident $ name ++ "_f") $ fromInteger i)
+        [Verilog.Assign (Verilog.LHS $ name' ++ ".t") (Verilog.IdentBit (name ++ "_t") . Verilog.Number $ fromInteger i)
+        ,Verilog.Assign (Verilog.LHS $ name' ++ ".f") (Verilog.IdentBit (name ++ "_f") . Verilog.Number $ fromInteger i)
         ,Verilog.Assign (Verilog.LHSBit (name ++ "_ack") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".ack")]
 
 
@@ -123,16 +127,18 @@ vlogDRWireOutputInst (Wire name) =
 vlogDRWireOutputInst (Bus x y name) =
     [Verilog.Output range $ map (name ++) ["_t", "_f"]
     ,Verilog.Input range [name ++ "_ack"]] ++
-    (concatMap go values)
+    concatMap go values
   where
     range = Just (Verilog.Number $ fromInteger x, Verilog.Number $ fromInteger y)
-    values = [x..y] :: [Integer]
+    values = [x'..y'] :: [Integer]
+    x' = min x y
+    y' = max x y
     go :: Integer -> [Verilog.ModuleItem]
     go i =
       let name' = expandBusWireName name i in
         [Verilog.Assign (Verilog.LHSBit (name ++ "_t") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".t")
         ,Verilog.Assign (Verilog.LHSBit (name ++ "_f") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".f")
-        ,Verilog.Assign (Verilog.LHS (name' ++ ".ack") ) (Verilog.Bit (Verilog.Ident $ name ++ "_ack") $ fromInteger i)]
+        ,Verilog.Assign (Verilog.LHS (name' ++ ".ack") ) (Verilog.IdentBit (name ++ "_ack") . Verilog.Number $ fromInteger i)]
 
 fixDffReset :: (MonadReader PrgOptions m) => Verilog.ModuleItem -> m Verilog.ModuleItem
 fixDffReset inst@(Verilog.Instance mname parms name portmap)
@@ -146,12 +152,12 @@ fixDffReset x = return x
 fixInstancesBitBlast :: Verilog.ModuleItem -> Verilog.ModuleItem
 fixInstancesBitBlast (Verilog.Instance mname parms name portmap) =
   Verilog.Instance mname parms name $ map go portmap where
-  go (x, Just (Verilog.Bit (Verilog.Ident name) idx)) = (x, Just . Verilog.Ident . expandBusWireName name $ toInteger idx)
+  go (x, Just (Verilog.IdentBit name (Verilog.Number idx))) = (x, Just . Verilog.Ident . expandBusWireName name $ value idx)
   go z = z
 fixInstancesBitBlast x = x
 
 vlogInputInstance :: [Verilog.Identifier] -> Verilog.ModuleItem
-vlogInputInstance xs = Verilog.Input Nothing xs
+vlogInputInstance = Verilog.Input Nothing
 
 wireName :: Wire -> String
 wireName (Wire n)    = n
@@ -170,8 +176,8 @@ processModule mod = do
   let drWires = concatMap vlogDRWireInstance $ Set.elems wires
   let drInputs = concatMap vlogDRWireInputInst $ Set.elems inputs
   let drOutputs = concatMap vlogDRWireOutputInst $ Set.elems outputs
-  let margs = (concatMap (vlogDRWirePort . wireName) (Set.elems $ Set.union inputs outputs)) ++ clkAndResetNames
-  instances <- mapM fixDffReset $ map fixInstancesBitBlast mitems
+  let margs = concatMap (vlogDRWirePort . wireName) (Set.elems $ Set.union inputs outputs) ++ clkAndResetNames
+  instances <- mapM (fixDffReset . fixInstancesBitBlast) mitems
   let insts' = [clkrstInst] ++ drWires ++ drInputs ++ drOutputs ++ instances
   return $ Verilog.Module mname margs insts'
 
