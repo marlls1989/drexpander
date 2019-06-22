@@ -41,11 +41,11 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - git: https://github.com/marlls1989/verilog.git
-    commit: v0.1
+    commit: 1bd8de6c1b1c5600dd2c1f72d3295aa79da58e63
   - git: https://github.com/marlls1989/glpk-hs.git
-    commit: v0.6.1
-  - git: git@github.com:marlls1989/gasp.git
-    commit: v1.1.1
+    commit: 3be20e60344c1751629a57dbb45927ee33ee35c9
+  - git: https://github.com/marlls1989/gasp.git
+    commit: c7a9b7ddb0713450bc2a3058f949dfdee85e6e4e
   - algebraic-graphs-0.3
 
 # Override default flag values for local packages and extra-deps
