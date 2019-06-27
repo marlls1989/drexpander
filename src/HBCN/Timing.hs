@@ -34,10 +34,17 @@ arrivalTimeConstraint cycleTime (place, src, dst) = do
         (NullTrans s, NullTrans d) -> FwSlack s d
         (DataTrans s, NullTrans d) -> BwSlack s d
         (NullTrans s, DataTrans d) -> BwSlack s d
+  let delay = case (src, dst) of
+        (DataTrans s, DataTrans d) -> FwDelay s d
+        (NullTrans s, NullTrans d) -> FwDelay s d
+        (DataTrans s, NullTrans d) -> BwDelay s d
+        (NullTrans s, DataTrans d) -> BwDelay s d
+  setVarBounds delay $ LBound 0
   setVarBounds slack $ LBound 0
   setVarBounds src' $ LBound 0
   setVarBounds dst' $ LBound 0
-  linCombination [(1, src'), (-1, dst'), (1, PseudoClock), (1, slack)] `equalTo` ct
+  linCombination [(1, src'), (-1, dst'), (1, delay)] `equalTo` ct
+  linCombination [(1, delay)] `equal` linCombination [(1, PseudoClock), (1, slack)]
 
 arrivalTimeEq cycleTime minDelay biasing (place, src, dst) = do
   let src' = Arrival src
@@ -59,13 +66,13 @@ arrivalTimeEq cycleTime minDelay biasing (place, src, dst) = do
   setVarBounds dst' $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)]  `equalTo` ct
   linCombination [(1, delay)] `equal` linCombination [(biasing + weight place, DelayFactor), (1, slack)]
-  linCombination [(1, PseudoClock)] `leq` linCombination [(1, delay)]
+  linCombination [(1, PseudoClock)] `leq` linCombination [(biasing + weight place, DelayFactor)]
 
 
 constraintCycleTime :: HBCN -> Double -> Double -> Double -> TimingLP
 constraintCycleTime hbcn cycleTime minDelay biasing = execLPM $ do
   setDirection Max
-  setObjective (linCombination [(1, DelayFactor)])
+  setObjective (linCombination [(1, DelayFactor), (1, PseudoClock)])
   setVarBounds DelayFactor $ LBound 0
   setVarBounds PseudoClock $ LBound 0
   mapM_ (arrivalTimeEq cycleTime minDelay biasing) $ edgeList hbcn
