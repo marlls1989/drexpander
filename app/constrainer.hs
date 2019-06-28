@@ -83,37 +83,37 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
     concatMap maxDelay (filter (\(_, v) -> v > clkPeriod + 0.001) $ Map.toList vars)
   where
     maxDelay (FwDelay src dst, val) =
-      printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (trueRail  dst) val ++
-      printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (falseRail dst) val ++
-      printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (falseRail dst) val ++
-      printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (trueRail  dst) val
+      printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (trueRail  dst) val ++
+      printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (falseRail dst) val ++
+      printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (falseRail dst) val ++
+      printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (trueRail  dst) val
     maxDelay (BwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
+          printf "set_max_delay -from %s -to %s %.3f\n" (ackRail src) (ackRail dst) val
       | src =~ "port:" =
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (trueRail dst) val ++
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (falseRail dst) val
+          printf "set_max_delay -from %s -to %s %.3f\n" (ackRail src) (trueRail dst) val ++
+          printf "set_max_delay -from %s -to %s %.3f\n" (ackRail src) (falseRail dst) val
       | dst =~ "port:" =
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
+          printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (ackRail dst) val ++
+          printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (ackRail dst) val
       | otherwise =
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (trueRail  dst) val ++
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (falseRail dst) val ++
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (falseRail dst) val ++
-          printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (trueRail  dst) val
+          printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (trueRail  dst) val ++
+          printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (falseRail dst) val ++
+          printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (falseRail dst) val ++
+          printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (trueRail  dst) val
     maxDelay _ = []
     separateBus :: String -> (String, String, String)
     separateBus = (=~ "\\[[0-9]+\\]")
     ackRail s = let (n, b, _) = separateBus s in
-          n ++ "_ack" ++ b
+          "{" ++ n ++ "_ack" ++ b ++ "}"
     trueRail s
       | s =~ "port:" = let (n, b, _) = separateBus s in
-          n ++ "_t" ++ b
-      | otherwise = s ++ "/t"
+          "{" ++ n ++ "_t" ++ b ++ "}"
+      | otherwise = "[get_pins -of_objects {" ++ s ++ "/t}]"
     falseRail s
       | s =~ "port:" = let (n, b, _) = separateBus s in
-          n ++ "_f" ++ b
-      | otherwise = s ++ "/f"
+          "{" ++ n ++ "_f" ++ b ++ "}"
+      | otherwise = "[get_pins -of_objects {" ++ s ++ "/f}]"
 
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
