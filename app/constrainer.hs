@@ -80,7 +80,7 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
     printf "set_input_delay -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
     printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
-    concatMap maxDelay (filter (\(_, v) -> v > clkPeriod + 0.001) $ Map.toList vars)
+    concatMap maxDelay (filter (\(_, v) -> (v > clkPeriod + 0.001) || (v < clkPeriod - 0.001)) $ Map.toList vars)
   where
     maxDelay (FwDelay src dst, val) =
       printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (trueRail  dst) val ++
@@ -137,7 +137,7 @@ prgMain = do
         if useMaxdelay opts then
           constraintCycleTime hbcn cycleTime minDelay bias
         else
-          computePseudoClock hbcn cycleTime
+          computePseudoClock hbcn cycleTime minDelay
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ do
