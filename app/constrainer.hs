@@ -32,8 +32,9 @@ prgOptions = PrgOptions
                               <> short 't'
                               <> help "Maximum Cycle Time Constraint")
              <*> option auto (long "mindelay"
+                              <> short 'm'
                               <> metavar "VALUE"
-                              <> value 0
+                              <> value 0.1
                               <> help "Minimum Path Delay")
              <*> option auto (long "bias"
                               <> metavar "VALUE"
@@ -50,8 +51,8 @@ prgOptions = PrgOptions
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
-             <*> flag False True (short 'm'
-                                  <> long "maxdelay"
+             <*> flag False True (short 'i'
+                                  <> long "individual"
                                   <> help "Compute maxdelay constraints of individual paths")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution")
@@ -82,38 +83,49 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
     printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
     concatMap maxDelay (filter (\(_, v) -> (v > clkPeriod + 0.001) || (v < clkPeriod - 0.001)) $ Map.toList vars)
   where
-    maxDelay (FwDelay src dst, val) =
-      printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (trueRail  dst) val ++
-      printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (falseRail dst) val ++
-      printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (falseRail dst) val ++
-      printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (trueRail  dst) val
+    maxDelay (FwDelay src dst, val)
+      | (src =~ "port:") && (dst =~ "port:") =
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (trueRail  dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (trueRail  src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (falseRail src) (trueRail  dst) val
+      | src =~ "port:" =
+        printf "set_max_delay -reset_path -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
+      | otherwise =
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
     maxDelay (BwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
-          printf "set_max_delay -from %s -to %s %.3f\n" (ackRail src) (ackRail dst) val
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
       | src =~ "port:" =
-          printf "set_max_delay -from %s -to %s %.3f\n" (ackRail src) (trueRail dst) val ++
-          printf "set_max_delay -from %s -to %s %.3f\n" (ackRail src) (falseRail dst) val
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (trueRail dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (falseRail dst) val
       | dst =~ "port:" =
-          printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (ackRail dst) val ++
-          printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (ackRail dst) val
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
       | otherwise =
-          printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (trueRail  dst) val ++
-          printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (falseRail dst) val ++
-          printf "set_max_delay -from %s -to %s %.3f\n" (trueRail  src) (falseRail dst) val ++
-          printf "set_max_delay -from %s -to %s %.3f\n" (falseRail src) (trueRail  dst) val
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
+        printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
     maxDelay _ = []
     separateBus :: String -> (String, String, String)
     separateBus = (=~ "\\[[0-9]+\\]")
     ackRail s = let (n, b, _) = separateBus s in
-          "{" ++ n ++ "_ack" ++ b ++ "}"
+          n ++ "_ack" ++ b
     trueRail s
       | s =~ "port:" = let (n, b, _) = separateBus s in
-          "{" ++ n ++ "_t" ++ b ++ "}"
-      | otherwise = "[get_pins -of_objects {" ++ s ++ "/t}]"
+          n ++ "_t" ++ b
+      | otherwise = s ++ "/t"
     falseRail s
       | s =~ "port:" = let (n, b, _) = separateBus s in
-          "{" ++ n ++ "_f" ++ b ++ "}"
-      | otherwise = "[get_pins -of_objects {" ++ s ++ "/f}]"
+          n ++ "_f" ++ b
+      | otherwise = s ++ "/f"
 
 sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
