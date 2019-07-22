@@ -18,7 +18,6 @@ data PrgOptions = PrgOptions
   , biasing         :: Double
   , clockName       :: String
   , outputFile      :: FilePath
-  , useMaxdelay     :: Bool
   , debugSol        :: Bool
   } deriving (Show)
 
@@ -34,7 +33,7 @@ prgOptions = PrgOptions
              <*> option auto (long "mindelay"
                               <> short 'm'
                               <> metavar "VALUE"
-                              <> value 0.1
+                              <> value 0
                               <> help "Minimum Path Delay")
              <*> option auto (long "bias"
                               <> metavar "VALUE"
@@ -51,9 +50,6 @@ prgOptions = PrgOptions
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
-             <*> flag False True (short 'i'
-                                  <> long "individual"
-                                  <> help "Compute maxdelay constraints of individual paths")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution")
 
@@ -145,11 +141,7 @@ prgMain = do
   let cycleTime = targetCycleTime opts
   let minDelay = minimalDelay opts
   let bias = biasing opts
-  let lp =
-        if useMaxdelay opts then
-          constraintCycleTime hbcn cycleTime minDelay bias
-        else
-          computePseudoClock hbcn cycleTime minDelay
+  let lp = constraintCycleTime hbcn cycleTime minDelay
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ do
