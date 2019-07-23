@@ -15,9 +15,9 @@ data PrgOptions = PrgOptions
   { inputFiles      :: [FilePath]
   , targetCycleTime :: Double
   , minimalDelay    :: Double
-  , biasing         :: Double
   , clockName       :: String
   , outputFile      :: FilePath
+  , pathExceptions  :: Bool
   , debugSol        :: Bool
   } deriving (Show)
 
@@ -35,11 +35,6 @@ prgOptions = PrgOptions
                               <> metavar "VALUE"
                               <> value 0
                               <> help "Minimum Path Delay")
-             <*> option auto (long "bias"
-                              <> metavar "VALUE"
-                              <> short 'b'
-                              <> value 0
-                              <> help "Path weight bias")
              <*> strOption (long "clock"
                             <> metavar "NAME"
                             <> short 'c'
@@ -50,6 +45,9 @@ prgOptions = PrgOptions
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File")
+             <*> flag False True (long "path-exceptions"
+                                  <> short 'x'
+                                  <> help "Construct path exceptions to relax freeslack")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution")
 
@@ -74,10 +72,13 @@ sdcContent :: (MonadReader PrgOptions m) => LPRet -> m String
 sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   opts <- ask
   let clkPeriod = vars Map.! PseudoClock
+  let individual = pathExceptions opts
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
     printf "set_input_delay -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
     printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
-    concatMap maxDelay (filter (\(_, v) -> (v > clkPeriod + 0.001) || (v < clkPeriod - 0.001)) $ Map.toList vars)
+    if individual then
+      concatMap maxDelay (filter (\(_, v) -> (v > clkPeriod + 0.001) || (v < clkPeriod - 0.001)) $ Map.toList vars)
+    else []
   where
     maxDelay (FwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
@@ -140,7 +141,6 @@ prgMain = do
   hbcn <- hbcnFromFiles $ inputFiles opts
   let cycleTime = targetCycleTime opts
   let minDelay = minimalDelay opts
-  let bias = biasing opts
   let lp = constraintCycleTime hbcn cycleTime minDelay
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result

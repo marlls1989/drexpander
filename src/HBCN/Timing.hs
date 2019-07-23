@@ -41,11 +41,11 @@ arrivalTimeEq cycleTime minDelay (place, src, dst) = do
   setVarBounds src' $ LBound 0
   setVarBounds dst' $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)] `equalTo` ct
-  linCombination [(1, delay)] `equal` linCombination [(1, PseudoClock), (-1, slack)]
+  linCombination [(1, delay)] `equal` linCombination [(1, PseudoClock), (1, slack)]
 
 constraintCycleTime :: HBCN -> Double -> Double -> TimingLP
 constraintCycleTime hbcn cycleTime minDelay = execLPM $ do
-  setDirection Min
+  setDirection Max
   setObjective $ linCombination [(1, PseudoClock)]
   setVarBounds PseudoClock $ LBound minDelay
   mapM_ (arrivalTimeEq cycleTime minDelay) $ edgeList hbcn
