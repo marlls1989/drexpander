@@ -100,8 +100,8 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
       | (src =~ "port:") && (dst =~ "port:") =
         printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
       | src =~ "port:" =
-        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (trueRail dst) val ++
-        printf "set_max_delay -reset_path -from {%s} -to {%s} %.3f\n" (ackRail src) (falseRail dst) val
+        printf "set_max_delay -reset_path -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
+        printf "set_max_delay -reset_path -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (falseRail dst) val
       | dst =~ "port:" =
         printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
         printf "set_max_delay -reset_path -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
