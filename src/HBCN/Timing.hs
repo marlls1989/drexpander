@@ -1,14 +1,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 module HBCN.Timing
   (LPVar (..)
-  ,TimingLP (..)
-  ,constraintCycleTime
-  ,arrivalTimeEq) where
+  ,TimingLP
+  ,constraintCycleTime) where
 
 import           Algebra.Graph.Labelled
 import           Control.Monad
 import           Data.LinearProgram
-import           Data.LinearProgram.LinExpr
 import           HBCN.Internal
 import           Prelude                    hiding (Num (..))
 
@@ -41,7 +39,9 @@ arrivalTimeEq cycleTime minDelay (place, src, dst) = do
   setVarBounds src' $ LBound 0
   setVarBounds dst' $ LBound 0
   linCombination [(1, src'), (-1, dst'), (1, delay)] `equalTo` ct
-  linCombination [(1, delay)] `equal` linCombination [(1, PseudoClock), (1, slack)]
+  case place of
+    MindelayPlace _ -> linCombination [(1, delay), (-1, slack)] `equalTo` minDelay
+    _ -> linCombination [(1, delay)] `equal` linCombination [(1, PseudoClock), (1, slack)]
 
 constraintCycleTime :: HBCN -> Double -> Double -> TimingLP
 constraintCycleTime hbcn cycleTime minDelay = execLPM $ do

@@ -1,8 +1,6 @@
 module HBCN.Internal where
 
 import           Algebra.Graph.Labelled
-import           Data.Function
-import           Data.Monoid
 import           Data.Semigroup         as SG
 
 data StructuralElement = Port String [String]
@@ -16,6 +14,7 @@ data Transition = DataTrans {nodeName :: String}
 
 data Place = Unconnected
            | Place {hasToken :: Bool}
+           | MindelayPlace {hasToken :: Bool}
            deriving (Show, Read, Eq, Ord)
 
 type HBCN = Graph Place Transition
@@ -45,15 +44,15 @@ createHBCNFromStructure = edges . concatMap go where
       sout = src ++ "/sout"
       sin = src ++ "/sin"
     in -- Input Slave
-      [(Place False, DataTrans src,  DataTrans sin)
-      ,(Place True,  NullTrans src,  NullTrans sin)
-      ,(Place False, DataTrans sin,  NullTrans src)
-      ,(Place False, NullTrans sin,  DataTrans src)
+      [(MindelayPlace False, DataTrans src,  DataTrans sin)
+      ,(MindelayPlace True,  NullTrans src,  NullTrans sin)
+      ,(MindelayPlace False, DataTrans sin,  NullTrans src)
+      ,(MindelayPlace False, NullTrans sin,  DataTrans src)
        -- Data stage
-      ,(Place True,  DataTrans sin,  DataTrans sout)
-      ,(Place False, NullTrans sin,  NullTrans sout)
-      ,(Place False, DataTrans sout, NullTrans sin)
-      ,(Place False, NullTrans sout, DataTrans sin)] ++
+      ,(MindelayPlace True,  DataTrans sin,  DataTrans sout)
+      ,(MindelayPlace False, NullTrans sin,  NullTrans sout)
+      ,(MindelayPlace False, DataTrans sout, NullTrans sin)
+      ,(MindelayPlace False, NullTrans sout, DataTrans sin)] ++
        -- Output slave
     concatMap (\x -> [(Place False, DataTrans sout, DataTrans x)
                      ,(Place False, NullTrans sout, NullTrans x)
