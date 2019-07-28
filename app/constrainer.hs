@@ -29,12 +29,12 @@ prgOptions = PrgOptions
              <*> option auto (long "cycletime"
                               <> metavar "VALUE"
                               <> short 't'
-                              <> help "Maximum Cycle Time Constraint")
+                              <> help "Target Cycle Time Constraint")
              <*> option auto (long "mindelay"
                               <> short 'm'
                               <> metavar "VALUE"
-                              <> value 0.1
-                              <> help "Minimum Path Delay")
+                              <> value (-1)
+                              <> help "Minimum Path Delay, defaults to 10% of target cycle time constraint")
              <*> strOption (long "clock"
                             <> metavar "NAME"
                             <> short 'c'
@@ -48,7 +48,7 @@ prgOptions = PrgOptions
              <*> flag True False (long "no-path-exceptions"
                                   <> help "Don't construct mindelay path exceptions")
              <*> flag False True (long "debug"
-                                  <> help "Print LP Variables Solution")
+                                  <> help "Print LP Variables Solution and export lp problem")
 
 
 
@@ -128,7 +128,7 @@ sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show
 printSolution :: (MonadIO m) => LPRet -> m ()
 printSolution (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
   mapM_  print $ Map.toList vars
-printSlack err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
+printSolution err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
 lpObjective :: LPRet -> Double
 lpObjective (Data.LinearProgram.GLPK.Success, Just (o, _)) = o
@@ -139,7 +139,9 @@ prgMain = do
   opts <- ask
   hbcn <- hbcnFromFiles $ inputFiles opts
   let cycleTime = targetCycleTime opts
-  let minDelay = minimalDelay opts
+  let minDelay = case minimalDelay opts of
+        x | x < 0 -> cycleTime/10
+          | otherwise -> x
   let lp = constraintCycleTime hbcn cycleTime minDelay
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
