@@ -18,6 +18,7 @@ data PrgOptions = PrgOptions
   , clockName       :: String
   , outputFile      :: FilePath
   , pathExceptions  :: Bool
+  , relaxEnable     :: Bool
   , debugSol        :: Bool
   } deriving (Show)
 
@@ -47,6 +48,8 @@ prgOptions = PrgOptions
                              <> help "Output SDC File")
              <*> flag True False (long "no-path-exceptions"
                                   <> help "Don't construct mindelay path exceptions")
+             <*> flag False True (long "relax"
+                                  <> help "Use free slack to relax timing constraints")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution and export lp problem")
 
@@ -146,10 +149,11 @@ prgMain = do
   opts <- ask
   hbcn <- hbcnFromFiles $ inputFiles opts
   let cycleTime = targetCycleTime opts
+  let relax = relaxEnable opts
   let minDelay = case minimalDelay opts of
         x | x < 0 -> cycleTime/10
           | otherwise -> x
-  let lp = constraintCycleTime hbcn cycleTime minDelay
+  let lp = constraintCycleTime hbcn cycleTime minDelay relax
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ do
