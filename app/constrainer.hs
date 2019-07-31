@@ -81,30 +81,37 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   where
     maxDelay (FwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
+        printf "# Forward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (trueRail  dst) val ++
         printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (falseRail dst) val ++
         printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (falseRail dst) val ++
         printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (trueRail  dst) val
       | src =~ "port:" =
+        printf "# Forward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
       | otherwise =
+        printf "# Forward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
     maxDelay (BwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
+        printf "# Backward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
       | src =~ "port:" =
+        printf "# Backward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (falseRail dst) val
       | dst =~ "port:" =
+        printf "# Backward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
       | otherwise =
+        printf "# Backward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
         printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
