@@ -25,27 +25,27 @@ data PrgOptions = PrgOptions
 prgOptions :: Parser PrgOptions
 prgOptions = PrgOptions
              <$> some (argument str
-                        (metavar "FILES"
-                         <> help "Input File Name"))
+                        (metavar "input"
+                         <> help "List of Structural Graph Files"))
              <*> option auto (long "cycletime"
-                              <> metavar "VALUE"
+                              <> metavar "time"
                               <> short 't'
                               <> help "Target Cycle Time Constraint")
              <*> option auto (long "mindelay"
                               <> short 'm'
-                              <> metavar "VALUE"
+                              <> metavar "time"
                               <> value (-1)
-                              <> help "Minimum Path Delay, defaults to 10% of target cycle time constraint")
+                              <> help "Minimum Path Delay, defaults to 10% of cycle time constraint")
              <*> strOption (long "clock"
-                            <> metavar "NAME"
+                            <> metavar "portname"
                             <> short 'c'
                             <> value "clk"
                             <> help "Clock port name")
              <*> option str (long "output"
-                             <> metavar "FILE"
+                             <> metavar "filename"
                              <> short 'o'
                              <> value "ncl_constraints.sdc"
-                             <> help "Output SDC File")
+                             <> help "Output SDC File, defaults to ncl_constraints.sdc")
              <*> flag True False (long "no-path-exceptions"
                                   <> help "Don't construct mindelay path exceptions")
              <*> flag False True (long "relax"
@@ -59,7 +59,7 @@ main :: IO ()
 main = do
   let opts = info (prgOptions <**> helper)
              ( fullDesc
-               <> progDesc "Calculates the pseudo-clock period constraint for a given circuit"
+               <> progDesc "Calculates the pseudo-clock constraints for a given circuit"
                <> header "hbcnConstrainer - Pulsar Linear Programming HBCN constrainer")
   options <- execParser opts
   runReaderT prgMain options
