@@ -76,8 +76,6 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
   let clkPeriod = vars Map.! PseudoClock
   let individual = pathExceptions opts
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
-    printf "set_input_delay -clock {%s} 0 [all_inputs]\n"   (clockName opts) ++
-    printf "set_output_delay -clock {%s} 0 [all_outputs]\n" (clockName opts) ++
     if individual then
       concatMap maxDelay (filter (\(_, v) -> (v > clkPeriod + 0.001) || (v < clkPeriod - 0.001)) $ Map.toList vars)
     else []
