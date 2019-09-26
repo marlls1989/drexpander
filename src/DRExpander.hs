@@ -119,11 +119,11 @@ vlogDRWireInputInst (Bus x y name) =
 
 vlogDRWireOutputInst :: Wire -> [Verilog.ModuleItem]
 vlogDRWireOutputInst (Wire name) =
-  [Verilog.Input Nothing $ map (name ++) ["_t", "_f"]
-  ,Verilog.Output Nothing [name ++ "_ack"]
-  ,Verilog.Assign (Verilog.LHS $ name ++ ".t") (Verilog.Ident $ name ++ "_t")
-  ,Verilog.Assign (Verilog.LHS $ name ++ ".f") (Verilog.Ident $ name ++ "_f")
-  ,Verilog.Assign (Verilog.LHS $ name ++ "_ack") (Verilog.Ident $ name ++ ".ack")]
+  [Verilog.Output Nothing $ map (name ++) ["_t", "_f"]
+  ,Verilog.Input Nothing [name ++ "_ack"]
+  ,Verilog.Assign (Verilog.LHS $ name ++ "_t") (Verilog.Ident $ name ++ ".t")
+  ,Verilog.Assign (Verilog.LHS $ name ++ "_f") (Verilog.Ident $ name ++ ".f")
+  ,Verilog.Assign (Verilog.LHS $ name ++ ".ack") (Verilog.Ident $ name ++ "_ack")]
 vlogDRWireOutputInst (Bus x y name) =
     [Verilog.Output range $ map (name ++) ["_t", "_f"]
     ,Verilog.Input range [name ++ "_ack"]] ++
