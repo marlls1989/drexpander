@@ -18,7 +18,6 @@ data PrgOptions = PrgOptions
   , clockName       :: String
   , outputFile      :: FilePath
   , pathExceptions  :: Bool
-  , relaxEnable     :: Bool
   , debugSol        :: Bool
   } deriving (Show)
 
@@ -48,8 +47,6 @@ prgOptions = PrgOptions
                              <> help "Output SDC File, defaults to ncl_constraints.sdc")
              <*> flag True False (long "no-path-exceptions"
                                   <> help "Don't construct mindelay path exceptions")
-             <*> flag False True (long "relax"
-                                  <> help "Use free slack to relax timing constraints")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution and export lp problem")
 
@@ -102,7 +99,11 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
     maxDelay (BwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
         printf "# Backward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
+        if src /= dst then
+          printf "set_max_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
+        else
+          printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
+          printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
       | src =~ "port:" =
         printf "# Backward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
@@ -147,11 +148,10 @@ prgMain = do
   opts <- ask
   hbcn <- hbcnFromFiles $ inputFiles opts
   let cycleTime = targetCycleTime opts
-  let relax = relaxEnable opts
   let minDelay = case minimalDelay opts of
         x | x < 0 -> cycleTime/10
           | otherwise -> x
-  let lp = constraintCycleTime hbcn cycleTime minDelay relax
+  let lp = constraintCycleTime hbcn cycleTime minDelay
   result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $ do
