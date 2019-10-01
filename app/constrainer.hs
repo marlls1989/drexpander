@@ -61,11 +61,11 @@ main = do
   options <- execParser opts
   runReaderT prgMain options
 
-hbcnFromFiles :: [FilePath] -> ReaderT PrgOptions IO HBCN
-hbcnFromFiles files = do
+hbcnFromFiles :: Double -> [FilePath] -> ReaderT PrgOptions IO HBCN
+hbcnFromFiles mindelay files = do
   text <- mapM (liftIO . readFile) files
   let structure = map read $ (lines . concat) text
-  return $ createHBCNFromStructure structure
+  return $ createHBCNFromStructure (Just mindelay) structure
 
 sdcContent :: (MonadReader PrgOptions m) => LPRet -> m String
 sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
@@ -146,18 +146,19 @@ lpObjective err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ sho
 prgMain :: ReaderT PrgOptions IO ()
 prgMain = do
   opts <- ask
-  hbcn <- hbcnFromFiles $ inputFiles opts
   let cycleTime = targetCycleTime opts
   let minDelay = case minimalDelay opts of
         x | x < 0 -> cycleTime/10
           | otherwise -> x
-  let lp = constraintCycleTime hbcn cycleTime minDelay
-  result <- liftIO $ glpSolveVars simplexDefaults lp
-  sdc <- sdcContent result
+  hbcn <- hbcnFromFiles minDelay $ inputFiles opts
+  let lp = constraintCycleTime hbcn cycleTime
   when (debugSol opts) $ do
     let lpfile = outputFile opts ++ ".lp"
-    printSolution result
     liftIO $ writeLP lpfile lp
+  result <- liftIO $ glpSolveVars simplexDefaults lp
+  sdc <- sdcContent result
+  when (debugSol opts) $
+    printSolution result
   liftIO $ if lpObjective result > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
