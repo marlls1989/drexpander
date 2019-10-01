@@ -99,11 +99,11 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
     maxDelay (BwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
         printf "# Backward Delay from %s to %s\n" src dst ++
-        if src /= dst then
+        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
+        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val ++
+        if dst /= src then
           printf "set_max_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
-        else
-          printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
-          printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
+        else []
       | src =~ "port:" =
         printf "# Backward Delay from %s to %s\n" src dst ++
         printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
