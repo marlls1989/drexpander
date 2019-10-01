@@ -52,21 +52,21 @@ structuralGraphFromElements minDelay = overlays . map go where
   go (NullReg src dst) = overlays $ map (\x -> src -< Channel AckNull Nothing True True >- x) dst
   go (DataReg src dst) =
     let
-      sout = src ++ "/sout"
-      sin = src ++ "/sin"
+      s1 = src ++ "/s1"
+      s0 = src ++ "/s0"
     in overlays $
-       [(src -< Channel ReqNull minDelay False False >- sin)
-       ,(sin -< Channel ReqData minDelay False False >- sout)] ++
-       map (\x ->  sout -< Channel AckNull Nothing True True >-  x) dst
+       [(src -< Channel ReqNull minDelay False False >- s0)
+       ,(s0 -< Channel ReqData minDelay False False >- s1)] ++
+       map (\x ->  s1 -< Channel AckNull Nothing True True >-  x) dst
   go (LoopReg src dst) =
     let
-      sout = src ++ "/sout"
-      sin = src ++ "/sin"
+      s0 = src ++ "/s0"
+      s1 = src ++ "/s1"
     in overlays $
-       [(src  -< Channel ReqNull minDelay False False >- sin)
-       ,(sin  -< Channel ReqData minDelay False False >- sout)
-       ,(sout -< Channel AckNull Nothing True  True  >- src)] ++
-       map (\x ->  sout -< Channel AckNull Nothing True True >-  x) dst
+       [(src -< Channel ReqNull minDelay False False >- s0)
+       ,(s0  -< Channel ReqData minDelay False False >- s1)
+       ,(s1  -< Channel AckNull minDelay False False  >- src)] ++
+       map (\x ->  s1 -< Channel AckNull Nothing True True >-  x) dst
 
 hbcnFromStructuralGraph :: StructuralGraph -> HBCN
 hbcnFromStructuralGraph g = overlay (baseHBCNFromStructuralGraph g) (reflexiveHBCNFromStructuralGraph g)
