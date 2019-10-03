@@ -8,6 +8,7 @@ import           Data.BitVec
 import           Data.Set               (Set)
 import qualified Data.Set               as Set
 import qualified Language.Verilog       as Verilog
+import Data.List
 
 data Wire = Wire String
           | Bus Integer Integer String
@@ -140,14 +141,27 @@ vlogDRWireOutputInst (Bus x y name) =
         ,Verilog.Assign (Verilog.LHSBit (name ++ "_f") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".f")
         ,Verilog.Assign (Verilog.LHS (name' ++ ".ack") ) (Verilog.IdentBit (name ++ "_ack") . Verilog.Number $ fromInteger i)]
 
+dedupList :: (Ord a) => [a] -> [a]
+dedupList = map head . group . sort
+
 fixDffReset :: (MonadReader PrgOptions m) => Verilog.ModuleItem -> m Verilog.ModuleItem
 fixDffReset inst@(Verilog.Instance mname parms name portmap)
-  | mname == "dff" || mname == "dffen" = do
+  | mname == "dff" = do
       env <- ask
       let resetPin = (Just "reset", Just . Verilog.Ident $ resetName env)
       return $ Verilog.Instance mname parms name (resetPin : portmap)
   | otherwise = return inst
 fixDffReset x = return x
+
+fixTieResetClk :: (MonadReader PrgOptions m) => Verilog.ModuleItem -> m Verilog.ModuleItem
+fixTieResetClk inst@(Verilog.Instance mname parms name portmap)
+  | mname == "tielo" || mname == "tiehi" = do
+      env <- ask
+      let resetPin = (Just "reset", Just . Verilog.Ident $ resetName env)
+      let clkPin = (Just "ck", Just . Verilog.Ident $ clkName env)
+      return $ Verilog.Instance mname parms name (clkPin : resetPin : portmap)
+  | otherwise = return inst
+fixTieResetClk x = return x
 
 fixInstancesBitBlast :: Verilog.ModuleItem -> Verilog.ModuleItem
 fixInstancesBitBlast (Verilog.Instance mname parms name portmap) =
@@ -177,7 +191,8 @@ processModule mod = do
   let drInputs = concatMap vlogDRWireInputInst $ Set.elems inputs
   let drOutputs = concatMap vlogDRWireOutputInst $ Set.elems outputs
   let margs = concatMap (vlogDRWirePort . wireName) (Set.elems $ Set.union inputs outputs) ++ clkAndResetNames
-  instances <- mapM (fixDffReset . fixInstancesBitBlast) mitems
+  fixedDFF <- mapM (fixDffReset . fixInstancesBitBlast) mitems
+  instances <- mapM fixTieResetClk fixedDFF
   let insts' = [clkrstInst] ++ drWires ++ drInputs ++ drOutputs ++ instances
   return $ Verilog.Module mname margs insts'
 

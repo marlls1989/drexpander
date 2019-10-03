@@ -84,13 +84,13 @@ reflexiveHBCNFromStructuralGraph = overlays . concatMap go . groupBy (\(_, _, x)
   go [] = []
   go ((Channel xphase xminDelay xrelax _, src, _):xs) =
     [overlay
-      (DataTrans src -< Place xrelax xminDelay (xphase <= AckData) >- NullTrans src)
-      (NullTrans src -< Place xrelax xminDelay (xphase >= ReqNull) >- DataTrans src)] ++
+      (DataTrans src -< Place False xminDelay (xphase <= AckData) >- NullTrans src)
+      (NullTrans src -< Place False xminDelay (xphase >= ReqNull) >- DataTrans src)] ++
     map (\(Channel yphase yminDelay yrelax _, dst, _) ->
-            overlays [(DataTrans src -< Place xrelax xminDelay (xphase <= AckData) >- NullTrans dst)
-                     ,(NullTrans src -< Place xrelax xminDelay (xphase >= ReqNull) >- DataTrans dst)
-                     ,(DataTrans dst -< Place yrelax yminDelay (yphase <= AckData) >- NullTrans src)
-                     ,(NullTrans dst -< Place yrelax yminDelay (yphase >= ReqNull) >- DataTrans src)
+            overlays [(DataTrans src -< Place False xminDelay (xphase <= AckData) >- NullTrans dst)
+                     ,(NullTrans src -< Place False xminDelay (xphase >= ReqNull) >- DataTrans dst)
+                     ,(DataTrans dst -< Place False yminDelay (yphase <= AckData) >- NullTrans src)
+                     ,(NullTrans dst -< Place False yminDelay (yphase >= ReqNull) >- DataTrans src)
                      ]) xs ++ go xs
 
 createHBCNFromStructure :: Maybe Double -> [StructuralElement] -> HBCN
