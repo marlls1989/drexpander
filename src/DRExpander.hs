@@ -96,11 +96,16 @@ vlogDRWirePort name = map (name ++) ["_t", "_f", "_ack"]
 
 vlogDRWireInputInst :: Wire -> [Verilog.ModuleItem]
 vlogDRWireInputInst (Wire name) =
-  [Verilog.Input Nothing $ map (name ++) ["_t", "_f"]
-  ,Verilog.Output Nothing [name ++ "_ack"]
-  ,Verilog.Assign (Verilog.LHS $ name ++ ".t") (Verilog.Ident $ name ++ "_t")
-  ,Verilog.Assign (Verilog.LHS $ name ++ ".f") (Verilog.Ident $ name ++ "_f")
-  ,Verilog.Assign (Verilog.LHS $ name ++ "_ack") (Verilog.Ident $ name ++ ".ack")]
+  let
+    trail = (Verilog.Ident $ name ++ "_t")
+    frail = (Verilog.Ident $ name ++ "_f")
+  in 
+    [Verilog.Input Nothing $ map (name ++) ["_t", "_f"]
+    ,Verilog.Output Nothing [name ++ "_ack"]
+    ,Verilog.Assign (Verilog.LHS $ name ++ ".t") trail
+    ,Verilog.Assign (Verilog.LHS $ name ++ ".f") frail
+    ,Verilog.Assign (Verilog.LHS $ name ++ ".cd") (Verilog.BinOp Verilog.BWOr trail frail)
+    ,Verilog.Assign (Verilog.LHS $ name ++ "_ack") (Verilog.Ident $ name ++ ".ack")]
 vlogDRWireInputInst (Bus x y name) =
     [Verilog.Input range $ map (name ++) ["_t", "_f"]
     ,Verilog.Output range [name ++ "_ack"]] ++
@@ -112,9 +117,14 @@ vlogDRWireInputInst (Bus x y name) =
     y' = max x y
     go :: Integer -> [Verilog.ModuleItem]
     go i =
-      let name' = expandBusWireName name i in
-        [Verilog.Assign (Verilog.LHS $ name' ++ ".t") (Verilog.IdentBit (name ++ "_t") . Verilog.Number $ fromInteger i)
-        ,Verilog.Assign (Verilog.LHS $ name' ++ ".f") (Verilog.IdentBit (name ++ "_f") . Verilog.Number $ fromInteger i)
+      let
+        name' = expandBusWireName name i
+        trail = (Verilog.IdentBit (name ++ "_t") . Verilog.Number $ fromInteger i)
+        frail = (Verilog.IdentBit (name ++ "_f") . Verilog.Number $ fromInteger i)
+      in
+        [Verilog.Assign (Verilog.LHS $ name' ++ ".t") trail
+        ,Verilog.Assign (Verilog.LHS $ name' ++ ".f") frail
+        ,Verilog.Assign (Verilog.LHS $ name' ++ ".cd") (Verilog.BinOp Verilog.BWOr trail frail)
         ,Verilog.Assign (Verilog.LHSBit (name ++ "_ack") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".ack")]
 
 
@@ -122,8 +132,8 @@ vlogDRWireOutputInst :: Wire -> [Verilog.ModuleItem]
 vlogDRWireOutputInst (Wire name) =
   [Verilog.Output Nothing $ map (name ++) ["_t", "_f"]
   ,Verilog.Input Nothing [name ++ "_ack"]
-  ,Verilog.Assign (Verilog.LHS $ name ++ "_t") (Verilog.Ident $ name ++ ".t")
-  ,Verilog.Assign (Verilog.LHS $ name ++ "_f") (Verilog.Ident $ name ++ ".f")
+  ,Verilog.Assign (Verilog.LHS $ name ++ "_t") (Verilog.BinOp Verilog.BWAnd (Verilog.Ident $ name ++ ".t") (Verilog.Ident $ name ++ ".cd"))
+  ,Verilog.Assign (Verilog.LHS $ name ++ "_f") (Verilog.BinOp Verilog.BWAnd (Verilog.Ident $ name ++ ".f") (Verilog.Ident $ name ++ ".cd"))
   ,Verilog.Assign (Verilog.LHS $ name ++ ".ack") (Verilog.Ident $ name ++ "_ack")]
 vlogDRWireOutputInst (Bus x y name) =
     [Verilog.Output range $ map (name ++) ["_t", "_f"]
@@ -137,8 +147,8 @@ vlogDRWireOutputInst (Bus x y name) =
     go :: Integer -> [Verilog.ModuleItem]
     go i =
       let name' = expandBusWireName name i in
-        [Verilog.Assign (Verilog.LHSBit (name ++ "_t") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".t")
-        ,Verilog.Assign (Verilog.LHSBit (name ++ "_f") (Verilog.Number $ fromInteger i)) (Verilog.Ident $ name' ++ ".f")
+        [Verilog.Assign (Verilog.LHSBit (name ++ "_t") (Verilog.Number $ fromInteger i)) (Verilog.BinOp Verilog.BWAnd (Verilog.Ident $ name' ++ ".t") (Verilog.Ident $ name' ++ ".cd"))
+        ,Verilog.Assign (Verilog.LHSBit (name ++ "_f") (Verilog.Number $ fromInteger i)) (Verilog.BinOp Verilog.BWAnd (Verilog.Ident $ name' ++ ".f") (Verilog.Ident $ name' ++ ".cd"))
         ,Verilog.Assign (Verilog.LHS (name' ++ ".ack") ) (Verilog.IdentBit (name ++ "_ack") . Verilog.Number $ fromInteger i)]
 
 dedupList :: (Ord a) => [a] -> [a]
