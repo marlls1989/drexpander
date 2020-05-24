@@ -151,11 +151,11 @@ prgMain = do
         x | x < 0 -> cycleTime/10
           | otherwise -> x
   hbcn <- hbcnFromFiles minDelay $ inputFiles opts
-  let lp = constraintCycleTime hbcn cycleTime
+  let lp = constraintCycleTime hbcn minDelay cycleTime
   when (debugSol opts) $ do
     let lpfile = outputFile opts ++ ".lp"
     liftIO $ writeLP lpfile lp
-  result <- liftIO $ glpSolveVars simplexDefaults lp
+  result <- liftIO $ glpSolveVars mipDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $
     printSolution result
