@@ -166,7 +166,7 @@ fixTieResetClk inst@(Verilog.Instance mname parms name portmap)
 fixTieResetClk x = return x
 
 fixInstancesBitBlast :: Verilog.ModuleItem -> Verilog.ModuleItem
-fixInstancesBitBlast a@(Verilog.Assign lhs expr) = Verilog.Instance "buff" [] ("buf_"++lhsname) [(Just "y", Just $ Verilog.Ident lhsname), (Just "", Just expr')]
+fixInstancesBitBlast a@(Verilog.Assign lhs expr) = Verilog.Instance "buff" [] ("buf_"++lhsname) [(Just "y", Just $ Verilog.Ident lhsname), (Just "a", Just expr')]
   where
     lhsname = case lhs of
       Verilog.LHS n -> n
