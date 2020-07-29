@@ -166,6 +166,15 @@ fixTieResetClk inst@(Verilog.Instance mname parms name portmap)
 fixTieResetClk x = return x
 
 fixInstancesBitBlast :: Verilog.ModuleItem -> Verilog.ModuleItem
+fixInstancesBitBlast (Verilog.Assign lhs expr) = Verilog.Instance "buff" [] ("buf_"++lhsname) [(Just "y", Just $ Verilog.Ident lhsname), (Just "", Just expr')]
+  where
+    lhsname = case lhs of
+      Verilog.LHS n -> n
+      Verilog.LHSBit n (Verilog.Number idx) -> expandBusWireName n $ value idx
+      _ -> error "Verilog input with unsuported constructed"
+    expr' = case expr of
+      Verilog.IdentBit n (Verilog.Number idx) -> Verilog.Ident . expandBusWireName n $ value idx
+      x -> x
 fixInstancesBitBlast (Verilog.Instance mname parms name portmap) =
   Verilog.Instance mname parms name $ map go portmap where
   go (x, Just (Verilog.IdentBit name (Verilog.Number idx))) = (x, Just . Verilog.Ident . expandBusWireName name $ value idx)
@@ -180,14 +189,14 @@ wireName (Wire n)    = n
 wireName (Bus _ _ n) = n
 
 processModule :: (MonadReader PrgOptions m) => Verilog.Module -> m Verilog.Module
-processModule mod = do
+processModule m = do
   options <- ask
   let clkAndResetNames = [clkName options, resetName options]
   let clkAndReset = Set.fromList $ map Wire clkAndResetNames
-  let inputs = vlogModuleInputs mod Set.\\ clkAndReset
-  let outputs = vlogModuleOutputs mod
-  let wires = vlogModuleAllWires mod Set.\\ clkAndReset
-  let (Verilog.Module mname _ mitems) = vlogModuleWithoutWires mod
+  let inputs = vlogModuleInputs m Set.\\ clkAndReset
+  let outputs = vlogModuleOutputs m
+  let wires = vlogModuleAllWires m Set.\\ clkAndReset
+  let (Verilog.Module mname _ mitems) = vlogModuleWithoutWires m
   let clkrstInst = vlogInputInstance clkAndResetNames
   let drWires = concatMap vlogDRWireInstance $ Set.elems wires
   let drInputs = concatMap vlogDRWireInputInst $ Set.elems inputs
