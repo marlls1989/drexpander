@@ -166,15 +166,16 @@ fixTieResetClk inst@(Verilog.Instance mname parms name portmap)
 fixTieResetClk x = return x
 
 fixInstancesBitBlast :: Verilog.ModuleItem -> Verilog.ModuleItem
-fixInstancesBitBlast (Verilog.Assign lhs expr) = Verilog.Instance "buff" [] ("buf_"++lhsname) [(Just "y", Just $ Verilog.Ident lhsname), (Just "", Just expr')]
+fixInstancesBitBlast a@(Verilog.Assign lhs expr) = Verilog.Instance "buff" [] ("buf_"++lhsname) [(Just "y", Just $ Verilog.Ident lhsname), (Just "", Just expr')]
   where
     lhsname = case lhs of
       Verilog.LHS n -> n
       Verilog.LHSBit n (Verilog.Number idx) -> expandBusWireName n $ value idx
-      _ -> error "Verilog input with unsuported constructed"
+      _ -> error $ "unsupported verilog construct at lhs: " ++ show a
     expr' = case expr of
       Verilog.IdentBit n (Verilog.Number idx) -> Verilog.Ident . expandBusWireName n $ value idx
-      x -> x
+      x@(Verilog.Ident _) -> x
+      _ -> error $ "unsupported verilog construct at rhs: " ++ show a
 fixInstancesBitBlast (Verilog.Instance mname parms name portmap) =
   Verilog.Instance mname parms name $ map go portmap where
   go (x, Just (Verilog.IdentBit name (Verilog.Number idx))) = (x, Just . Verilog.Ident . expandBusWireName name $ value idx)
