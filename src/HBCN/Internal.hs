@@ -69,7 +69,7 @@ structuralGraphFromElements minDelay = overlays . map go where
        map (\x ->  s1 -< Channel AckNull Nothing True True >-  x) dst
 
 hbcnFromStructuralGraph :: StructuralGraph -> HBCN
-hbcnFromStructuralGraph x = overlays [baseHBCNFromStructuralGraph x, reflexiveHBCNFromStructuralGraph x]
+hbcnFromStructuralGraph = baseHBCNFromStructuralGraph
 
 baseHBCNFromStructuralGraph :: StructuralGraph -> HBCN
 baseHBCNFromStructuralGraph = overlays . map go . edgeList where
