@@ -160,7 +160,7 @@ fixTieResetClk inst@(Verilog.Instance mname parms name portmap)
   | mname == "tielo" || mname == "tiehi" = do
       env <- ask
       let resetPin = (Just "reset", Just . Verilog.Ident $ resetName env)
-      let clkPin = (Just "ck", Just . Verilog.Ident $ clkName env)
+      let clkPin = (Just "clk", Just . Verilog.Ident $ clkName env)
       return $ Verilog.Instance mname parms name (clkPin : resetPin : portmap)
   | otherwise = return inst
 fixTieResetClk x = return x
