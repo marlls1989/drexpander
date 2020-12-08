@@ -155,7 +155,7 @@ prgMain = do
   when (debugSol opts) $ do
     let lpfile = outputFile opts ++ ".lp"
     liftIO $ writeLP lpfile lp
-  result <- liftIO $ glpSolveVars mipDefaults lp
+  result <- liftIO $ glpSolveVars simplexDefaults lp
   sdc <- sdcContent result
   when (debugSol opts) $
     printSolution result
