@@ -67,16 +67,40 @@ hbcnFromFiles mindelay files = do
   let structure = map read $ (lines . concat) text
   return $ createHBCNFromStructure (Just mindelay) structure
 
-sdcContent :: (MonadReader PrgOptions m) => LPRet -> m String
-sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
+sdcContent :: (MonadReader PrgOptions m) => Map LPVar Double -> m String
+sdcContent vars = do
   opts <- ask
   let clkPeriod = vars Map.! PseudoClock
   let individual = pathExceptions opts
   return $ printf "create_clock -period %.3f [get_port {%s}]\n" clkPeriod (clockName opts) ++
-    if individual then
+    (if individual then
       concatMap maxDelay (filter (\(_, v) -> (v > clkPeriod + 0.001) || (v < clkPeriod - 0.001)) $ Map.toList vars)
-    else []
+    else []) ++
+    concatMap minDelay (Map.toList vars)
   where
+    minDelay (MinDelay src dst, val)
+      | (src =~ "port:") && (dst =~ "port:") =
+        printf "# Reflexive Min Delay from %s to %s\n" src dst ++
+        printf "set_min_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
+        printf "set_min_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val ++
+        if dst /= src then
+          printf "set_min_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
+        else []
+      | src =~ "port:" =
+        printf "# Reflexive Min Delay from %s to %s\n" src dst ++
+        printf "set_min_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
+        printf "set_min_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (falseRail dst) val
+      | dst =~ "port:" =
+        printf "# Backward Delay from %s to %s\n" src dst ++
+        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
+        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
+      | otherwise =
+        printf "# Reflexive Min Delay from %s to %s\n" src dst ++
+        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
+        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
+        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
+        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
+    minDelay _ = []
     maxDelay (FwDelay src dst, val)
       | (src =~ "port:") && (dst =~ "port:") =
         printf "# Forward Delay from %s to %s\n" src dst ++
@@ -132,8 +156,6 @@ sdcContent (Data.LinearProgram.GLPK.Success, Just (_, vars)) = do
           n ++ "_f" ++ b
       | otherwise = s ++ "/f"
 
-sdcContent err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
-
 printSolution :: (MonadIO m) => LPRet -> m ()
 printSolution (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
   mapM_  print $ Map.toList vars
@@ -151,15 +173,27 @@ prgMain = do
         x | x < 0 -> cycleTime/10
           | otherwise -> x
   hbcn <- hbcnFromFiles minDelay $ inputFiles opts
-  let lp = constraintCycleTime hbcn minDelay cycleTime
+
+  let ctLp = constraintCycleTime hbcn minDelay cycleTime
   when (debugSol opts) $ do
-    let lpfile = outputFile opts ++ ".lp"
-    liftIO $ writeLP lpfile lp
-  result <- liftIO $ glpSolveVars simplexDefaults lp
-  sdc <- sdcContent result
-  when (debugSol opts) $
-    printSolution result
-  liftIO $ if lpObjective result > 0.0005 then do
+    let ctLpfile = outputFile opts ++ ".cycletime.lp"
+    liftIO $ writeLP ctLpfile ctLp
+  ctResult <- liftIO $ glpSolveVars simplexDefaults ctLp
+  let ctVars = case ctResult of
+        (Data.LinearProgram.GLPK.Success, Just (_, x)) -> x
+        err -> errorWithoutStackTrace . printf "Could not solve Cycletime LP: %s" $ show err
+
+  let minLp = constraintReflexivePaths hbcn ctVars
+  when (debugSol opts) $ do
+    let minLpfile = outputFile opts ++ ".mindelay.lp"
+    liftIO $ writeLP minLpfile minLp
+  minResult <- liftIO $ glpSolveVars simplexDefaults minLp
+  let lpVars = case minResult of
+        (Data.LinearProgram.GLPK.Success, Just (_, x)) -> x
+        err -> errorWithoutStackTrace . printf "Could not solve Mindelay LP: %s" $ show err
+
+  sdc <- sdcContent lpVars
+  liftIO $ if lpObjective ctResult > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
   else
