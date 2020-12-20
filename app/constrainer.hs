@@ -78,83 +78,28 @@ sdcContent vars = do
     else []) ++
     concatMap minDelay (Map.toList vars)
   where
-    minDelay (MinDelay src dst, val)
-      | (src =~ "port:") && (dst =~ "port:") =
-        printf "# Reflexive Min Delay from %s to %s\n" src dst ++
-        printf "set_min_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
-        printf "set_min_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val ++
-        if dst /= src then
-          printf "set_min_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
-        else []
-      | src =~ "port:" =
-        printf "# Reflexive Min Delay from %s to %s\n" src dst ++
-        printf "set_min_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
-        printf "set_min_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (falseRail dst) val
-      | dst =~ "port:" =
-        printf "# Backward Delay from %s to %s\n" src dst ++
-        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
-        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
-      | otherwise =
-        printf "# Reflexive Min Delay from %s to %s\n" src dst ++
-        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
-        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
-        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
-        printf "set_min_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
+    minDelay (MinDelay src dst, val) =
+        printf "\n# Reflexive Min Delay from %s to %s\n" src dst ++
+        printf "set_min_delay -from %s -to %s %.3f\n" (srcRails  src) (dstRails dst) val
     minDelay _ = []
-    maxDelay (FwDelay src dst, val)
-      | (src =~ "port:") && (dst =~ "port:") =
-        printf "# Forward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (trueRail  dst) val ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (falseRail dst) val ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (falseRail dst) val ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (trueRail  dst) val
-      | src =~ "port:" =
-        printf "# Forward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
-        printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
-        printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
-        printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
-      | otherwise =
-        printf "# Forward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
-    maxDelay (BwDelay src dst, val)
-      | (src =~ "port:") && (dst =~ "port:") =
-        printf "# Backward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
-        printf "set_max_delay -from {%s} -to {%s} %.3f\n" (falseRail src) (ackRail dst) val ++
-        if dst /= src then
-          printf "set_max_delay -from {%s} -to {%s} %.3f\n" (ackRail src) (ackRail dst) val
-        else []
-      | src =~ "port:" =
-        printf "# Backward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (trueRail dst) val ++
-        printf "set_max_delay -from {%s} -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (ackRail src) (falseRail dst) val
-      | dst =~ "port:" =
-        printf "# Backward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (trueRail  src) (ackRail dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to {%s} %.3f\n" (falseRail src) (ackRail dst) val
-      | otherwise =
-        printf "# Backward Delay from %s to %s\n" src dst ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (trueRail  dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (falseRail dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (trueRail  src) (falseRail dst) val ++
-        printf "set_max_delay -from [get_pin -of_objects {%s} -filter {is_clock_pin==true}] -to [get_pin -of_objects {%s} -filter {(is_clock_pin==false) && (direction==in)}] %.3f\n" (falseRail src) (trueRail  dst) val
+    maxDelay (FwDelay src dst, val) =
+        printf "\n# Forward Delay from %s to %s\n" src dst ++
+        printf "set_max_delay -from %s -to %s %.3f\n" (srcRails  src) (dstRails  dst) val
+    maxDelay (BwDelay src dst, val) =
+        printf "\n# Backward Delay from %s to %s\n" src dst ++
+        printf "set_max_delay -from %s -to %s %.3f\n" (srcRails src) (dstRails dst) val
     maxDelay _ = []
     separateBus :: String -> (String, String, String)
     separateBus = (=~ "\\[[0-9]+\\]")
-    ackRail s = let (n, b, _) = separateBus s in
-          n ++ "_ack" ++ b
-    trueRail s
+    srcRails, dstRails :: String -> String
+    srcRails s
       | s =~ "port:" = let (n, b, _) = separateBus s in
-          n ++ "_t" ++ b
-      | otherwise = s ++ "/t"
-    falseRail s
+          printf "[get_db [vfind {%s}] -if {.direction == in}]" (n ++ "_*" ++ b)
+      | otherwise = printf "[get_pin -of_objects [vfind {%s}] -filter {is_clock_pin==true}]" (s ++ "/*")
+    dstRails s
       | s =~ "port:" = let (n, b, _) = separateBus s in
-          n ++ "_f" ++ b
-      | otherwise = s ++ "/f"
+          printf "[get_db [vfind {%s}] -if {.direction == out}]" (n ++ "_*" ++ b)
+      | otherwise = printf "[get_pin -of_objects [vfind {%s}] -filter {(is_data==true) && (direction==in)}]" (s ++ "/*")
 
 printSolution :: (MonadIO m) => LPRet -> m ()
 printSolution (Data.LinearProgram.GLPK.Success, Just (_, vars)) = liftIO $
