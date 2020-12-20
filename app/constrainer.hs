@@ -188,11 +188,11 @@ prgMain = do
     let minLpfile = outputFile opts ++ ".mindelay.lp"
     liftIO $ writeLP minLpfile minLp
   minResult <- liftIO $ glpSolveVars simplexDefaults minLp
-  let lpVars = case minResult of
+  let minVars = case minResult of
         (Data.LinearProgram.GLPK.Success, Just (_, x)) -> x
         err -> errorWithoutStackTrace . printf "Could not solve Mindelay LP: %s" $ show err
 
-  sdc <- sdcContent lpVars
+  sdc <- sdcContent minVars
   liftIO $ if lpObjective ctResult > 0.0005 then do
     printf "Writing constraints to %s\n" (outputFile opts)
     writeFile (outputFile opts) sdc
