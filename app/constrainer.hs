@@ -19,6 +19,7 @@ data PrgOptions = PrgOptions
   , outputFile      :: FilePath
   , pathExceptions  :: Bool
   , debugSol        :: Bool
+  , constraintHold  :: Bool
   } deriving (Show)
 
 prgOptions :: Parser PrgOptions
@@ -46,9 +47,11 @@ prgOptions = PrgOptions
                              <> value "ncl_constraints.sdc"
                              <> help "Output SDC File, defaults to ncl_constraints.sdc")
              <*> flag True False (long "no-path-exceptions"
-                                  <> help "Don't construct mindelay path exceptions")
+                                  <> help "Don't construct path exceptions")
              <*> flag False True (long "debug"
                                   <> help "Print LP Variables Solution and export lp problem")
+             <*> flag False True (long "hold"
+                                  <> help "Constraint minimal delay of reflexive paths")
 
 
 
@@ -110,6 +113,10 @@ lpObjective :: LPRet -> Double
 lpObjective (Data.LinearProgram.GLPK.Success, Just (o, _)) = o
 lpObjective err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
 
+lpVars :: LPRet -> Map LPVar Double
+lpVars (Data.LinearProgram.GLPK.Success, Just (_, x)) = x
+lpVars err = errorWithoutStackTrace . printf "Could not solve LP: %s" $ show err
+
 prgMain :: ReaderT PrgOptions IO ()
 prgMain = do
   opts <- ask
@@ -124,18 +131,18 @@ prgMain = do
     let ctLpfile = outputFile opts ++ ".cycletime.lp"
     liftIO $ writeLP ctLpfile ctLp
   ctResult <- liftIO $ glpSolveVars simplexDefaults ctLp
-  let ctVars = case ctResult of
-        (Data.LinearProgram.GLPK.Success, Just (_, x)) -> x
-        err -> errorWithoutStackTrace . printf "Could not solve Cycletime LP: %s" $ show err
+  let ctVars = lpVars ctResult
 
-  let minLp = constraintReflexivePaths hbcn ctVars
-  when (debugSol opts) $ do
-    let minLpfile = outputFile opts ++ ".mindelay.lp"
-    liftIO $ writeLP minLpfile minLp
-  minResult <- liftIO $ glpSolveVars simplexDefaults minLp
-  let minVars = case minResult of
-        (Data.LinearProgram.GLPK.Success, Just (_, x)) -> x
-        err -> errorWithoutStackTrace . printf "Could not solve Mindelay LP: %s" $ show err
+  when (debugSol opts) $ printSolution ctResult
+
+  minVars <- if constraintHold opts then do
+    let minLp = constraintReflexivePaths hbcn ctVars
+    when (debugSol opts) $ do
+      let minLpfile = outputFile opts ++ ".mindelay.lp"
+      liftIO $ writeLP minLpfile minLp
+    minResult <- liftIO $ glpSolveVars simplexDefaults minLp
+    return $ lpVars minResult
+  else return ctVars
 
   sdc <- sdcContent minVars
   liftIO $ if lpObjective ctResult > 0.0005 then do
