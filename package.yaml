@@ -27,7 +27,6 @@ dependencies:
 - array
 - verilog
 - algebraic-graphs >= 0.3
-- glpk-hs
 - optparse-applicative
 - regex-tdfa
 
@@ -35,15 +34,6 @@ library:
   source-dirs: src
 
 executables:
-  hbcnConstrainer:
-    main:                constrainer.hs
-    source-dirs:         app
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - drexpander
   drexpander:
     main:                expander.hs
     source-dirs:         app
