@@ -73,10 +73,13 @@ vlogModuleIntWires mod = wires Set.\\ Set.union inputs outputs
     outputs = vlogModuleOutputs mod
 
 vlogModuleAllWires :: Verilog.Module -> Set Wire
-vlogModuleAllWires mod = Set.unions [wires, inputs, outputs]
+vlogModuleAllWires mod = Set.unions (wires : inputs : outputs : [])
   where
+    wires :: Set Wire
     wires = vlogModuleWires mod
+    inputs :: Set Wire
     inputs = vlogModuleInputs mod
+    outputs :: Set Wire
     outputs = vlogModuleOutputs mod
 
 vlogModuleWithoutWires :: Verilog.Module -> Verilog.Module

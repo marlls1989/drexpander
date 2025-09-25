@@ -5,27 +5,16 @@
 
 packages:
 - completed:
-    commit: 1bd8de6c1b1c5600dd2c1f72d3295aa79da58e63
+    commit: 136fc2b8c9757c124ab53293f584c470e444b180
     git: https://github.com/marlls1989/verilog.git
     name: verilog
     pantry-tree:
-      sha256: d72f2fb45072dcc82a2da40ff55c12a2ff959935c6446182665195f4a12f30a4
+      sha256: b179aa6bc5c69e28680bc588521105171635652752056a95755051b1c72593dc
       size: 863
     version: 0.1.0
   original:
-    commit: 1bd8de6c1b1c5600dd2c1f72d3295aa79da58e63
+    commit: 136fc2b8c9757c124ab53293f584c470e444b180
     git: https://github.com/marlls1989/verilog.git
-- completed:
-    commit: 3be20e60344c1751629a57dbb45927ee33ee35c9
-    git: https://github.com/marlls1989/glpk-hs.git
-    name: glpk-hs
-    pantry-tree:
-      sha256: 62f9769cef79828a57e6df36e6ca065537ba4738b646f29b397aee27749a35f5
-      size: 1609
-    version: 0.6.1
-  original:
-    commit: 3be20e60344c1751629a57dbb45927ee33ee35c9
-    git: https://github.com/marlls1989/glpk-hs.git
 - completed:
     commit: c7a9b7ddb0713450bc2a3058f949dfdee85e6e4e
     git: https://github.com/marlls1989/gasp.git
@@ -37,16 +26,9 @@ packages:
   original:
     commit: c7a9b7ddb0713450bc2a3058f949dfdee85e6e4e
     git: https://github.com/marlls1989/gasp.git
-- completed:
-    hackage: algebraic-graphs-0.3@sha256:0cc77b36358ee813b7bee94ee64e1d064fcc0cba190ebc9ed899e79cc2e19345,9131
-    pantry-tree:
-      sha256: ff66675c6a3ae736131ddda3621b60217433a9f03c40171c274bf1cb10180202
-      size: 4042
-  original:
-    hackage: algebraic-graphs-0.3
 snapshots:
 - completed:
-    sha256: 3e9a7b96708cd9196ce7e5396143725097a71f2e9ca8dc19f03f5082642bc1b5
-    size: 499178
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/12/0.yaml
-  original: lts-12.0
+    sha256: 87da71cb0ae9ee1ea1bf51a8eb9812f39f779be76abc0a3c926defd8afda05d1
+    size: 719139
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/28.yaml
+  original: lts-22.28
