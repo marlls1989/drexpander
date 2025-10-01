@@ -90,16 +90,35 @@ vlogModuleWithoutWires (Verilog.Module name _ items) =
   p (Verilog.Wire _ _)   = False
   p _                    = True
 
-vlogDRAdaptor :: String -> String -> Maybe Integer -> Verilog.ModuleItem
-vlogDRAdaptor mname name Nothing = Verilog.Instance mname [] ("i" ++ name)
+vlogDRInAckAdaptor ::String -> Verilog.ModuleItem
+vlogDRInAckAdaptor name = Verilog.Instance "drinputack" [] ("i" ++ name)
+   [(Just "busack", Just . Verilog.Ident $ name ++ "_busack"),
+   (Just "ack", Just . Verilog.Ident $ name ++ "_ack")]
+
+vlogDRInAdaptor ::String -> Maybe Integer -> Verilog.ModuleItem
+vlogDRInAdaptor name Nothing = Verilog.Instance "drinput" [] ("i" ++ name)
+  [(Just "t", Just . Verilog.Ident $ name ++ "_t"),
+   (Just "f", Just . Verilog.Ident $ name ++ "_f"),
+   (Just "busack", Just . Verilog.Ident $ name ++ "_busack"),
+   (Just "drw", Just . Verilog.Ident $ name)]
+vlogDRInAdaptor name (Just idx) = Verilog.Instance "drinput" [] ("i" ++ name')
+  [(Just "t", Just . Verilog.IdentBit (name ++ "_t") . Verilog.Number $ fromInteger idx),
+   (Just "f", Just . Verilog.IdentBit (name ++ "_f") . Verilog.Number $ fromInteger idx),
+   (Just "busack", Just . Verilog.Ident $ name ++ "_busack"),
+   (Just "drw", Just $ Verilog.Ident name')]
+  where
+    name' = expandBusWireName name idx
+
+vlogDROutAdaptor ::String -> Maybe Integer -> Verilog.ModuleItem
+vlogDROutAdaptor name Nothing = Verilog.Instance "droutput" [] ("i" ++ name)
   [(Just "t", Just . Verilog.Ident $ name ++ "_t"),
    (Just "f", Just . Verilog.Ident $ name ++ "_f"),
    (Just "ack", Just . Verilog.Ident $ name ++ "_ack"),
    (Just "drw", Just . Verilog.Ident $ name)]
-vlogDRAdaptor mname name (Just idx) = Verilog.Instance mname [] ("i" ++ name')
+vlogDROutAdaptor name (Just idx) = Verilog.Instance "droutput" [] ("i" ++ name')
   [(Just "t", Just . Verilog.IdentBit (name ++ "_t") . Verilog.Number $ fromInteger idx),
    (Just "f", Just . Verilog.IdentBit (name ++ "_f") . Verilog.Number $ fromInteger idx),
-   (Just "ack", Just . Verilog.IdentBit (name ++ "_ack") . Verilog.Number $ fromInteger idx),
+   (Just "ack", Just . Verilog.Ident $ name ++ "_ack"),
    (Just "drw", Just $ Verilog.Ident name')]
   where
     name' = expandBusWireName name idx
@@ -115,28 +134,32 @@ vlogDRWireInputInst :: Wire -> [Verilog.ModuleItem]
 vlogDRWireInputInst (Wire name) =
     [Verilog.Input Nothing $ map (name ++) ["_t", "_f"]
     ,Verilog.Output Nothing [name ++ "_ack"]
-    ,vlogDRAdaptor "drinput" name Nothing]
+    ,Verilog.Instance "drwire" [] (name ++ "_busack") []
+    ,vlogDRInAckAdaptor name
+    ,vlogDRInAdaptor name Nothing]
 vlogDRWireInputInst (Bus x y name) =
     [Verilog.Input range $ map (name ++) ["_t", "_f"]
-    ,Verilog.Output range [name ++ "_ack"]] ++
-    concatMap go values
+    ,Verilog.Output Nothing [name ++ "_ack"]
+    ,Verilog.Instance "drwire" [] (name ++ "_busack") []
+    ,vlogDRInAckAdaptor name] ++
+    (createAdaptor <$> busRange)
   where
     range = Just (Verilog.Number $ fromInteger x, Verilog.Number $ fromInteger y)
-    values = [x'..y'] :: [Integer]
+    busRange = [x'..y'] :: [Integer]
     x' = min x y
     y' = max x y
-    go :: Integer -> [Verilog.ModuleItem]
-    go i = [vlogDRAdaptor "drinput" name $ Just i]
+    createAdaptor :: Integer -> Verilog.ModuleItem
+    createAdaptor i = vlogDRInAdaptor name $ Just i
 
 
 vlogDRWireOutputInst :: Wire -> [Verilog.ModuleItem]
 vlogDRWireOutputInst (Wire name) =
   [Verilog.Output Nothing $ map (name ++) ["_t", "_f"]
   ,Verilog.Input Nothing [name ++ "_ack"]
-  ,vlogDRAdaptor "droutput" name Nothing]
+  ,vlogDROutAdaptor name Nothing]
 vlogDRWireOutputInst (Bus x y name) =
     [Verilog.Output range $ map (name ++) ["_t", "_f"]
-    ,Verilog.Input range [name ++ "_ack"]] ++
+    ,Verilog.Input Nothing [name ++ "_ack"]] ++
     concatMap go values
   where
     range = Just (Verilog.Number $ fromInteger x, Verilog.Number $ fromInteger y)
@@ -144,7 +167,7 @@ vlogDRWireOutputInst (Bus x y name) =
     x' = min x y
     y' = max x y
     go :: Integer -> [Verilog.ModuleItem]
-    go i = [vlogDRAdaptor "droutput" name $ Just i]
+    go i = [vlogDROutAdaptor name $ Just i]
 
 dedupList :: (Ord a) => [a] -> [a]
 dedupList = map head . group . sort
