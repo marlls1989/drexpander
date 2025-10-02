@@ -91,7 +91,7 @@ vlogModuleWithoutWires (Verilog.Module name _ items) =
   p _                    = True
 
 vlogDRInAckAdaptor ::String -> Verilog.ModuleItem
-vlogDRInAckAdaptor name = Verilog.Instance "drinputack" [] ("i" ++ name)
+vlogDRInAckAdaptor name = Verilog.Instance "drinputack" [] ("i" ++ name ++ "_ack")
    [(Just "busack", Just . Verilog.Ident $ name ++ "_busack"),
    (Just "ack", Just . Verilog.Ident $ name ++ "_ack")]
 
