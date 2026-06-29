@@ -20,7 +20,7 @@ Requires [Stack](https://docs.haskellstack.org/) (no system libraries — the ol
 dependency was removed).
 
 ```bash
-stack build                                          # resolver lts-22.28 -> GHC 9.6
+stack build                                          # resolver lts-24.46 -> GHC 9.10
 stack install --local-bin-path /path/to/<flow>/bin   # drops the `drexpander` binary into a flow's bin/
 ```
 
