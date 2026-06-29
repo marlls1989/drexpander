@@ -5,15 +5,15 @@
 
 packages:
 - completed:
-    commit: 136fc2b8c9757c124ab53293f584c470e444b180
+    commit: 317411ad97ef97f5b9a7663114f240c1da06fd48
     git: https://github.com/marlls1989/verilog.git
     name: verilog
     pantry-tree:
-      sha256: b179aa6bc5c69e28680bc588521105171635652752056a95755051b1c72593dc
-      size: 863
+      sha256: 5382f1a582a53c8cfd4facbba32f3de40b7b24ee2d869b5d10ce7925905a9835
+      size: 918
     version: 0.1.0
   original:
-    commit: 136fc2b8c9757c124ab53293f584c470e444b180
+    commit: 317411ad97ef97f5b9a7663114f240c1da06fd48
     git: https://github.com/marlls1989/verilog.git
 - completed:
     commit: c7a9b7ddb0713450bc2a3058f949dfdee85e6e4e
@@ -28,7 +28,7 @@ packages:
     git: https://github.com/marlls1989/gasp.git
 snapshots:
 - completed:
-    sha256: 87da71cb0ae9ee1ea1bf51a8eb9812f39f779be76abc0a3c926defd8afda05d1
-    size: 719139
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/22/28.yaml
-  original: lts-22.28
+    sha256: 2e84de3088a8643c3743210ec31c50b2aeccf5fb085042d2e43e3ef700e7a2cd
+    size: 732461
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/24/46.yaml
+  original: lts-24.46
