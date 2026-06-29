@@ -147,7 +147,7 @@ vlogDRWireOutputInst (Bus x y name) =
     go i = [vlogDRAdaptor "droutput" name $ Just i]
 
 dedupList :: (Ord a) => [a] -> [a]
-dedupList = map head . group . sort
+dedupList = Set.toList . Set.fromList
 
 fixDffReset :: (MonadReader PrgOptions m) => Verilog.ModuleItem -> m Verilog.ModuleItem
 fixDffReset inst@(Verilog.Instance mname parms name portmap)

@@ -18,7 +18,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-22.28
+resolver: lts-24.46
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -41,7 +41,7 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - git: https://github.com/marlls1989/verilog.git
-    commit: 136fc2b8c9757c124ab53293f584c470e444b180
+    commit: 317411ad97ef97f5b9a7663114f240c1da06fd48
   - git: https://github.com/marlls1989/gasp.git
     commit: c7a9b7ddb0713450bc2a3058f949dfdee85e6e4e
   #- algebraic-graphs-0.3
