@@ -1,0 +1,27 @@
+module design(a_t, a_f, a_ack, y_t, y_f, y_ack, b_t, b_f, b_ack, z_t, z_f, z_ack, clk, reset);
+input  clk, reset;
+drwire a ();
+drwire w ();
+drwire y ();
+drwire b_0 ();
+drwire b_1 ();
+drwire z_0 ();
+drwire z_1 ();
+input  a_t, a_f;
+output a_ack;
+drinput ia (.t(a_t), .f(a_f), .ack(a_ack), .drw(a));
+input  [1:0] b_t, b_f;
+output [1:0] b_ack;
+drinput ib_0 (.t(b_t[0]), .f(b_f[0]), .ack(b_ack[0]), .drw(b_0));
+drinput ib_1 (.t(b_t[1]), .f(b_f[1]), .ack(b_ack[1]), .drw(b_1));
+output y_t, y_f;
+input  y_ack;
+droutput iy (.t(y_t), .f(y_f), .ack(y_ack), .drw(y));
+output [1:0] z_t, z_f;
+input  [1:0] z_ack;
+droutput iz_0 (.t(z_t[0]), .f(z_f[0]), .ack(z_ack[0]), .drw(z_0));
+droutput iz_1 (.t(z_t[1]), .f(z_f[1]), .ack(z_ack[1]), .drw(z_1));
+buff buf_w (.y(w), .a(a));
+dff r0 (.reset(reset), .q(y), .d(w));
+tielo t0 (.clk(clk), .reset(reset), .y(z_0));
+endmodule
